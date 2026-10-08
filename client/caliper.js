@@ -460,13 +460,13 @@
   .bar.morphing { overflow: hidden; }
   .bb.main { width: 30px; padding: 0; justify-content: center; position: relative; }
   .bb.main.on:hover { background: #4f8cff; }
-  .bar.collapsed .badge { animation: caliper-fade .2s ease-out; position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
+  .bar.collapsed .badge { position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
   .bar .ib { width: 30px; height: 30px; border-radius: 999px; }
   .badge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: #ffb02e; color: #111; font-size: 10px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
   .bb { transition: background-color .28s ease, color .28s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: #bdbdbd; }
   .bb:hover { background: rgba(255,255,255,.07); color: #fff; }
   .bb.on { background: #4f8cff; color: #fff; }
-  @keyframes caliper-fade { from { opacity: 0; } }
+  .bar.morphing .badge { visibility: hidden; } /* would be clipped mid-collapse; pops in after */
   /* Shortcut hint: only on hover, above the bar (below it when the bar sits near the top). */
   [data-tip] { position: relative; }
   [data-tip]:hover::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); padding: 3px 8px; border-radius: 999px; background: rgba(20,20,20,.94); color: #e9e9e9; font-size: 11px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.3), 0 0 0 .5px rgba(255,255,255,.08); }
@@ -1612,7 +1612,16 @@
       if (barAnim === anim) barAnim = null;
       bar.classList.remove('morphing');
     };
-    anim.onfinish = anim.oncancel = done;
+    anim.oncancel = done;
+    anim.onfinish = () => {
+      done();
+      // Collapsed with changes: the count pops up onto the circle once it has settled.
+      const badge = S.barCollapsed && mainBtn.querySelector('.badge');
+      if (badge) badge.animate(
+        [{ opacity: 0, transform: 'translateY(6px) scale(.5)' }, { opacity: 1, transform: 'none' }],
+        { duration: 300, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' },
+      );
+    };
   }
 
   // Toolbar position: null = bottom centre; otherwise its top-left, kept inside the viewport.
