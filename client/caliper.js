@@ -531,7 +531,10 @@
   .sw { width: 26px; height: 26px; border-radius: 7px; flex: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.14); background-image: linear-gradient(45deg,#555 25%,transparent 25%,transparent 75%,#555 75%),linear-gradient(45deg,#555 25%,transparent 25%,transparent 75%,#555 75%); background-size: 8px 8px; background-position: 0 0, 4px 4px; position: relative; overflow: hidden; }
   .sw i { position: absolute; inset: 0; }
   .native { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
-  .ctl .tok { color: #6f9bff; font-size: 10.5px; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+  .field { display: flex; align-items: center; gap: 6px; cursor: text; }
+  .field:focus-within { border-color: #4f8cff; background: #1c1c1c; }
+  .field input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: none; padding: 0; color: #fff; }
+  .field .tok { color: #777; white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis; flex: none; }
   .pop { background: #111; border-radius: 8px; padding: 8px; display: grid; gap: 8px; margin: 6px 0 4px; }
   .pop-h { color: #8a8a8a; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: -3px; }
   .pop .sws { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-height: 120px; overflow: auto; padding: 2px; }
@@ -742,7 +745,8 @@
         val.append(t, spec.unit && /\d$/.test(t) ? h('span', { class: 'u' }, spec.unit) : '');
         fill.style.width = clamp(((v - spec.min) / (spec.max - spec.min)) * 100, 0, 100) + '%';
       }
-      tok.textContent = (v != null && spec.tok && spec.tok(v)) || '';
+      const t = (v != null && spec.tok && spec.tok(v)) || '';
+      box.title = (spec.title || spec.props.join(', ')) + (t ? ` · ${t}` : '');
     };
     const commit = (v) => {
       v = clamp(round(Math.round(v / spec.step) * spec.step, spec.dec || 0), spec.hardMin ?? spec.min, spec.hardMax);
@@ -1014,9 +1018,9 @@
 
   function color(label, prop) {
     const sw = h('button', { class: 'sw', title: 'Colors on this page' }, h('i'));
-    const hex = h('input', { class: 'txt', spellcheck: false, 'data-param': '' });
+    const hex = h('input', { spellcheck: false, 'data-param': '' });
     const tok = h('span', { class: 'tok' });
-    const r = row(label, [prop], [sw, hex, tok]);
+    const r = row(label, [prop], [sw, h('label', { class: 'txt field' }, hex, tok)]);
     const open = S.colorOpen === prop;
     const pop = h('div', { class: 'pop', hidden: !open });
     const wrap = h('div', { class: 'color-wrap' }, r, pop);
