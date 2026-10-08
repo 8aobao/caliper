@@ -490,8 +490,7 @@
 
   .body { overflow: auto; overscroll-behavior: contain; padding: 4px 0 6px; scrollbar-width: thin; scrollbar-color: #333 transparent; }
   .sec + .sec { border-top: 1px solid rgba(255,255,255,.05); }
-  .sh { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 9px 12px 6px; color: #c8c8c8; font-size: 10.5px; font-weight: 500; letter-spacing: 0; }
-  .sh:hover { color: #fff; }
+  .sh { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 12px 8px; color: #fff; font-size: 13px; font-weight: 500; letter-spacing: 0; }
   .sh .chev { color: #8a8a8a; }
   .sh .chev { transition: transform .15s; width: 10px; height: 10px; display: inline-flex; } .sh .chev svg { width: 100%; height: 100%; }
   .sec.closed .chev { transform: rotate(-90deg); }
@@ -504,7 +503,8 @@
   .sec.closed .sbi { visibility: hidden; transition: visibility 0s .26s; }
   .sh .chev { transition: transform .26s cubic-bezier(.2,.8,.2,1) !important; }
   @media (prefers-reduced-motion: reduce) { .sbw, .sbi > .sb, .sh .chev { transition: none !important; } }
-  .sb { padding: 0 10px 6px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  /* Groups (a label with its box or boxes) are 10px apart; boxes within a group stay 4px. */
+  .sb { padding: 0 10px 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 
   .scrub { min-width: 0; position: relative; height: 26px; border-radius: 7px; background: #262626; display: flex; align-items: center; gap: 6px; padding: 0 8px; cursor: ew-resize; user-select: none; overflow: hidden; outline: none; }
   .scrub:hover { background: #2c2c2c; }
@@ -527,7 +527,7 @@
   .scrub:hover .side-ic, .scrub.drag .side-ic, .scrub:focus-visible .side-ic { color: #fff; }
 
   .grid2, .grid4 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
-  .quad .qh { display: flex; align-items: center; justify-content: space-between; height: 20px; color: #a8a8a8; padding: 0 2px 0 4px; }
+  .quad .qh { display: flex; align-items: center; justify-content: space-between; height: 20px; color: #a8a8a8; padding: 0 2px 0 4px; margin-bottom: 4px; }
   .quad .qh .rl { display: flex; align-items: center; gap: 6px; }
 
   .row { display: flex; align-items: center; gap: 8px; min-height: 26px; }
