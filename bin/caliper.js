@@ -29,7 +29,7 @@ switch (cmd) {
     break;
   }
   default:
-    console.log(`caliper — live style tuning for the browser, handed to your agent
+    console.log(`caliper (caliper-dev) — live style tuning for the browser, handed to your agent
 
   caliper [server]          serve the browser client + change queue on :${DEFAULT_PORT}
   caliper mcp               MCP server for agents (also hosts the HTTP server if the port is free)

@@ -12,7 +12,7 @@ const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf
 
 function clientSource() {
   const format = fs.readFileSync(path.join(ROOT, 'src/format.js'), 'utf8').replace(/^export /gm, '');
-  return fs.readFileSync(path.join(ROOT, 'client/caliper.js'), 'utf8').replace('/*__FORMAT__*/', format);
+  return fs.readFileSync(path.join(ROOT, 'client/caliper.js'), 'utf8').replace('/*__FORMAT__*/', format).replace('__CALIPER_VERSION__', VERSION);
 }
 
 const send = (res, status, body, type = 'application/json') => {

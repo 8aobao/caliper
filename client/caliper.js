@@ -1814,7 +1814,7 @@
     renderBar();
     connect();
     window.__caliper = {
-      version: '0.1.0',
+      version: '__CALIPER_VERSION__',
       endpoint: ENDPOINT,
       state: S,
       inspect: setInspect,

@@ -1,10 +1,12 @@
 {
-  "name": "caliper",
+  "name": "caliper-dev",
   "version": "0.1.0",
-  "private": true,
-  "description": "Click any element, see the parameters that make it, tune them live, hand the result to your agent.",
+  "description": "Click any element on your dev site, see the parameters that make it, tune them live, then save the preview or send it to your coding agent.",
+  "keywords": ["design", "inspector", "devtools", "tailwind", "css", "live-edit", "mcp", "claude", "agent"],
+  "license": "UNLICENSED",
   "type": "module",
   "bin": { "caliper": "bin/caliper.js" },
+  "files": ["bin/", "src/", "client/", "demo/", "README.md"],
   "scripts": {
     "start": "node bin/caliper.js server"
   },

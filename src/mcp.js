@@ -2,10 +2,12 @@
 // It also hosts the HTTP server when nothing else is on the port, so registering the MCP server
 // is the only setup: the browser client works whenever an agent session is open.
 import readline from 'node:readline';
+import fs from 'node:fs';
 import * as store from './store.js';
 import { startServer } from './server.js';
 import { formatChange, AGENT_GUIDE } from './format.js';
 
+const VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const TOOLS = [
@@ -95,7 +97,7 @@ async function handle(msg) {
       return {
         protocolVersion: msg.params?.protocolVersion || '2025-06-18',
         capabilities: { tools: {} },
-        serverInfo: { name: 'caliper', version: '0.1.0' },
+        serverInfo: { name: 'caliper', version: VERSION },
         instructions:
           'Caliper lets the designer tune element styles live in the browser and send them here. When the user mentions Caliper changes, call caliper_pending (or caliper_watch for watch mode), apply them in source, then caliper_resolve each one.',
       };

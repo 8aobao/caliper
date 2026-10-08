@@ -12,19 +12,27 @@ Click any element on your dev site, see the parameters that make it, tune them l
 - **Toolbar** — click, hold and drag it anywhere (no handle; any part of it works, buttons included; double-click its background to reset), collapse it to a small chip with `‹`; its position is remembered. change list (toggle each preview, jump to it, remove), 👁 original vs. edited, *Send N* for everything unsent, connection dot.
 - **Copy** — the same agent prompt to the clipboard, for any agent, no server needed.
 
-## Setup
+## Install
 
-Caliper is one script tag served by a tiny local server (no dependencies).
-
-The MCP server also hosts the HTTP server, so once registered, it runs whenever a Claude Code session is open:
+Caliper is one script tag served by a tiny local server. No runtime dependencies; Node 18+.
 
 ```sh
-claude mcp add -s user caliper -- node ~/caliper/bin/caliper.js mcp
+npm i -D caliper-dev
 ```
 
-Or run the HTTP server alone: `node ~/caliper/bin/caliper.js server` (port 4848, `CALIPER_PORT` to change).
+**1. Run the server** (port 4848; set `CALIPER_PORT` to change it):
 
-Add the script to the project in dev only. Next.js (App Router) root layout:
+```sh
+npx caliper server
+```
+
+Or let your agent run it: register the MCP server once and it starts whenever a Claude Code session is open (it hosts the HTTP server too):
+
+```sh
+claude mcp add -s user caliper -- npx -y caliper-dev mcp
+```
+
+**2. Add the script to your app, in development only.** Next.js (App Router) root layout:
 
 ```tsx
 import Script from "next/script";
@@ -34,13 +42,15 @@ import Script from "next/script";
 )}
 ```
 
-Anything else: `<script src="http://localhost:4848/caliper.js" defer></script>`. Demo: http://localhost:4848/demo.
+Anything else: `<script src="http://localhost:4848/caliper.js" defer></script>`.
+
+Try it without a project: run the server and open http://localhost:4848/demo. Press `⌥C` (or click the circle) to start.
 
 ## Agent side
 
 MCP tools: `caliper_pending` (list + mark acknowledged), `caliper_watch` (block until new changes — watch mode), `caliper_resolve {id, summary}`, `caliper_dismiss {id, reason}`. The designer sees each status live in the panel.
 
-Without MCP, the HTTP API (Agentation-style): `GET /pending`, `GET /changes/:id`, `PATCH /changes/:id {"status":"resolved","reply":"…"}`. CLI: `caliper pending`, `caliper resolve <id> [summary]`.
+Without MCP, the HTTP API (Agentation-style): `GET /pending`, `GET /changes/:id`, `PATCH /changes/:id {"status":"resolved","reply":"…"}`. CLI: `npx caliper pending`, `npx caliper resolve <id> [summary]`.
 
 Changes are stored in `~/.caliper/store.json` (finished ones are pruned after a week).
 
