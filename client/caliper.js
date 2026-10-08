@@ -490,8 +490,9 @@
 
   .body { overflow: auto; overscroll-behavior: contain; padding: 4px 0 6px; scrollbar-width: thin; scrollbar-color: #333 transparent; }
   .sec + .sec { border-top: 1px solid rgba(255,255,255,.05); }
-  .sh { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 9px 12px 6px; color: #8a8a8a; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
-  .sh:hover { color: #ddd; }
+  .sh { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 9px 12px 6px; color: #c8c8c8; font-size: 10.5px; font-weight: 500; letter-spacing: 0; }
+  .sh:hover { color: #fff; }
+  .sh .chev { color: #8a8a8a; }
   .sh .chev { transition: transform .15s; width: 10px; height: 10px; display: inline-flex; } .sh .chev svg { width: 100%; height: 100%; }
   .sec.closed .chev { transform: rotate(-90deg); }
   /* Height animates via grid rows 1fr ↔ 0fr (works for any content height, no measuring). */
@@ -546,7 +547,7 @@
   .field input { flex: 1; min-width: 0; height: 100%; background: none; border: 0; outline: none; padding: 0; color: #fff; }
   .field .tok { color: #777; white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis; flex: none; }
   .pop { background: #111; border-radius: 8px; padding: 8px; display: grid; gap: 8px; margin: 6px 0 4px; }
-  .pop-h { color: #8a8a8a; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: -3px; }
+  .pop-h { color: #c8c8c8; font-size: 10px; font-weight: 500; margin-bottom: -3px; }
   .pop .sws { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-height: 120px; overflow: auto; padding: 2px; }
   .pop .sws button { aspect-ratio: 1; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
   .pop .sws button:hover { box-shadow: 0 0 0 1.5px #fff; }
