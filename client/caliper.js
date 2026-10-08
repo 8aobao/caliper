@@ -59,10 +59,10 @@
   const ICON = {
     target:
       '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg>',
-    list: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M3 8h10M3 12h6"/></svg>',
-    eye: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/></svg>',
+    list: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 3.25h13M1.5 8h13M1.5 12.75h8.5"/></svg>',
+    eye: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s2.6-5.25 7-5.25S15 8 15 8s-2.6 5.25-7 5.25S1 8 1 8z"/><circle cx="8" cy="8" r="2.4"/></svg>',
     eyeOff:
-      '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><path d="M2 14L14 2"/></svg>',
+      '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s2.6-5.25 7-5.25S15 8 15 8s-2.6 5.25-7 5.25S1 8 1 8z"/><path d="M2 14L14 2"/></svg>',
     send: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8l12-5.5L9 14l-1.6-4.6z"/></svg>',
     up: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 13V3M4 7l4-4 4 4"/></svg>',
     down: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v10M4 9l4 4 4-4"/></svg>',
@@ -1471,7 +1471,7 @@
     bar.append(
       h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Inspect (⌥C)', onclick: () => setInspect(!S.inspecting) }, icon('target'), 'Inspect', h('span', { class: 'kbd' }, '⌥C')),
       h('div', { class: 'sep' }),
-      h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list'), h('span', { class: 'count' }, here.length)),
+      h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list')),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
       h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
       h('button', { class: 'ib', title: 'Collapse', onclick: () => setCollapsed(true) }, icon('collapse')),
