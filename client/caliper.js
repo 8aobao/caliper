@@ -1496,7 +1496,7 @@
   // Even optical spacing: measure what you actually see of each item (a filled shape's box, or a
   // bare icon's drawn glyph) and set margins so every visible gap is the same, including the gap
   // from the last icon to the bar's end.
-  const BAR_GAP = 14;
+  const BAR_GAP = 20;
   function evenSpacing() {
     const items = [...bar.children];
     items.forEach((x) => (x.style.marginLeft = x.style.marginRight = '0px'));
