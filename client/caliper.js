@@ -458,11 +458,16 @@
   .bb { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: #bdbdbd; }
   .bb:hover { background: rgba(255,255,255,.07); color: #fff; }
   .bb.on { background: #4f8cff; color: #fff; }
+  .bb.solo { width: 30px; padding: 0; justify-content: center; cursor: default; }
+  .bb.solo.on:hover { background: #4f8cff; }
+  /* Shortcut hint: only on hover, above the bar (below it when the bar sits near the top). */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); padding: 3px 8px; border-radius: 999px; background: rgba(20,20,20,.94); color: #e9e9e9; font-size: 11px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.3), 0 0 0 .5px rgba(255,255,255,.08); }
+  .bar.tips-below [data-tip]:hover::after { bottom: auto; top: calc(100% + 10px); }
+  .bar.dragging [data-tip]::after, .bar.morphing [data-tip]::after { display: none; }
   .bb.primary { background: #fff; color: #111; } .bb.primary:hover { background: #e6e6e6; }
   .bb[disabled] { opacity: .35; pointer-events: none; }
-  .kbd { font-size: 10px; opacity: .55; }
   .count { min-width: 16px; text-align: center; }
-  .sep { width: 1px; height: 18px; background: rgba(255,255,255,.1); margin: 0 3px; }
 
   .panel { position: fixed; width: 292px; max-height: calc(100vh - 90px); display: flex; flex-direction: column; background: rgba(20,20,20,.96); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; box-shadow: 0 16px 50px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); overflow: hidden; }
   .head { padding: 10px 10px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.06); cursor: grab; user-select: none; }
@@ -1463,7 +1468,7 @@
     bar.classList.toggle('collapsed', S.barCollapsed);
     if (S.barCollapsed) {
       bar.append(
-        h('button', { class: 'bb', title: 'Activate Caliper (⌥C)', onclick: () => setCollapsed(false) },
+        h('button', { class: 'bb', 'data-tip': '⌥C', 'aria-label': 'Activate Caliper (⌥C)', onclick: () => setCollapsed(false) },
           icon('target'), here.length ? h('span', { class: 'badge' }, here.length) : ''),
       );
       placeBar();
@@ -1471,8 +1476,8 @@
       return;
     }
     bar.append(
-      h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Inspect (⌥C)', onclick: () => setInspect(!S.inspecting) }, icon('target'), 'Inspect', h('span', { class: 'kbd' }, '⌥C')),
-      h('div', { class: 'sep' }),
+      // While the bar is open Caliper is on: this is a status light, not a switch (collapse to stop).
+      h('button', { class: 'bb solo on', 'data-tip': '⌥C', 'aria-label': 'Inspecting (⌥C closes)' }, icon('target')),
       h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list')),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
       h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
@@ -1546,6 +1551,7 @@
     }
     bar.style.left = clamp(x, 8, Math.max(8, innerWidth - w - 8)) + 'px';
     bar.style.top = clamp(y, 8, Math.max(8, innerHeight - hgt - 8)) + 'px';
+    bar.classList.toggle('tips-below', px(bar.style.top) < 48);
     placeList();
   }
   function placeList() {
@@ -1689,7 +1695,7 @@
     if (e.altKey && e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       if (S.barCollapsed) setCollapsed(false);
-      else setInspect(!S.inspecting);
+      else setCollapsed(true);
       return;
     }
     if (typing) return;
@@ -1697,7 +1703,6 @@
       if (S.colorOpen) (S.colorOpen = null), renderPanel();
       else if (S.listOpen) (S.listOpen = false), renderList(), renderBar();
       else if (S.sel) deselect();
-      else if (S.inspecting) setInspect(false);
       else if (!S.barCollapsed) setCollapsed(true);
       else return;
       e.preventDefault();
