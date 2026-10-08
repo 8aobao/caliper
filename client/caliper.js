@@ -450,6 +450,9 @@
   .bar.dragging { cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging * { cursor: grabbing !important; }
   .bar > * { flex-shrink: 0; }
+  .bar:not(.collapsed) { gap: 0; }
+  .bar:not(.collapsed) .bb:not(.on):not(.primary) { padding: 0 7px; }
+  .bar:not(.collapsed) .ib { width: 26px; }
   .bar.morphing { overflow: hidden; }
   .bar.collapsed .bb { width: 30px; padding: 0; justify-content: center; position: relative; }
   .bar.collapsed .badge { position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
@@ -1483,12 +1486,38 @@
       h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
       h('button', { class: 'ib', title: 'Collapse', onclick: () => setCollapsed(true) }, icon('collapse')),
     );
+    evenSpacing();
     placeBar();
     syncFoot();
   }
 
   // Collapsed = inactive: no inspecting, no selection, no list. Expanding activates Caliper and
   // goes straight into Inspect. Saved/sent previews keep applying either way.
+  // Even optical spacing: measure what you actually see of each item (a filled shape's box, or a
+  // bare icon's drawn glyph) and set margins so every visible gap is the same, including the gap
+  // from the last icon to the bar's end.
+  const BAR_GAP = 14;
+  function evenSpacing() {
+    const items = [...bar.children];
+    items.forEach((x) => (x.style.marginLeft = x.style.marginRight = '0px'));
+    const seen = items.map((x) => {
+      const box = x.getBoundingClientRect();
+      if (x.matches('.on, .primary')) return { box, l: box.left, r: box.right }; // filled shapes
+      const marks = [...x.querySelectorAll('svg *')].map((m) => m.getBoundingClientRect()).filter((r) => r.width || r.height);
+      if (!marks.length) return { box, l: box.left, r: box.right };
+      const stroke = 0.75; // half the 1.5 stroke, which the geometry box leaves out
+      return { box, l: Math.min(...marks.map((r) => r.left)) - stroke, r: Math.max(...marks.map((r) => r.right)) + stroke };
+    });
+    for (let i = 1; i < items.length; i++) {
+      const insetPrev = seen[i - 1].box.right - seen[i - 1].r;
+      const insetCur = seen[i].l - seen[i].box.left;
+      items[i].style.marginLeft = BAR_GAP - insetPrev - insetCur + 'px';
+    }
+    const last = seen[seen.length - 1];
+    const pad = px(cs(bar).paddingRight);
+    items[items.length - 1].style.marginRight = BAR_GAP - pad - (last.box.right - last.r) + 'px';
+  }
+
   function setCollapsed(on) {
     animateBar(() => {
       S.barCollapsed = on;
