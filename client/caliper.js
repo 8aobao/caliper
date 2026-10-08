@@ -459,7 +459,6 @@
   .kbd { font-size: 10px; opacity: .55; }
   .count { min-width: 16px; text-align: center; }
   .sep { width: 1px; height: 18px; background: rgba(255,255,255,.1); margin: 0 3px; }
-  .net { width: 6px; height: 6px; border-radius: 50%; background: #666; margin: 0 8px 0 6px; } .net.ok { background: #44d17a; }
 
   .panel { position: fixed; width: 292px; max-height: calc(100vh - 90px); display: flex; flex-direction: column; background: rgba(20,20,20,.96); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; box-shadow: 0 16px 50px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); overflow: hidden; }
   .head { padding: 10px 10px 8px 12px; border-bottom: 1px solid rgba(255,255,255,.06); cursor: grab; user-select: none; }
@@ -1458,7 +1457,7 @@
     if (S.barCollapsed) {
       bar.append(
         h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Expand Caliper (drag to move · ⌥C inspects)', onclick: () => setCollapsed(false) },
-          icon('target'), here.length ? h('span', { class: 'badge' }, here.length) : '', h('span', { class: 'net' + (S.online ? ' ok' : ''), style: 'margin:0 0 0 2px' })),
+          icon('target'), here.length ? h('span', { class: 'badge' }, here.length) : ''),
       );
       placeBar();
       syncFoot();
@@ -1470,8 +1469,7 @@
       h('div', { class: 'sep' }),
       h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list'), h('span', { class: 'count' }, here.length)),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
-      h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : 'Caliper server offline', onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
-      h('span', { class: 'net' + (S.online ? ' ok' : ''), title: S.online ? `Connected to ${ENDPOINT}` : `Offline — run "caliper server" (${ENDPOINT})` }),
+      h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
       h('button', { class: 'ib', title: 'Collapse', onclick: () => setCollapsed(true) }, icon('collapse')),
     );
     placeBar();
