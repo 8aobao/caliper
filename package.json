@@ -1,0 +1,12 @@
+{
+  "name": "caliper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Click any element, see the parameters that make it, tune them live, hand the result to your agent.",
+  "type": "module",
+  "bin": { "caliper": "bin/caliper.js" },
+  "scripts": {
+    "start": "node bin/caliper.js server"
+  },
+  "engines": { "node": ">=18" }
+}

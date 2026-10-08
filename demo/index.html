@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Caliper demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-ink: #14121f;
+      --color-pink: #ff7ad1;
+      --color-green: #63c59b;
+      --color-paper: #f6f4ef;
+      --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    }
+  </style>
+  <script src="/caliper.js" defer></script>
+</head>
+<body class="bg-paper text-ink font-sans antialiased">
+  <main class="mx-auto max-w-5xl px-6 py-20">
+    <p class="text-sm font-medium uppercase tracking-widest text-pink">Caliper demo</p>
+    <h1 class="mt-4 text-6xl font-semibold leading-tight tracking-tight">Tune any element, live.</h1>
+    <p class="mt-6 max-w-xl text-lg leading-relaxed text-ink/70">Turn on Inspect (⌥C), click a heading or a button and drag its values. Save the preview, or send it to the agent to make it real in code.</p>
+    <div class="mt-10 flex items-center gap-3">
+      <a href="#" class="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white">Get started</a>
+      <a href="#" class="rounded-full border border-ink/15 px-5 py-3 text-sm font-medium">Read the docs</a>
+    </div>
+    <section class="mt-20 grid grid-cols-3 gap-4">
+      <article class="rounded-2xl bg-white p-6 shadow-sm"><h3 class="text-lg font-semibold">Inspect</h3><p class="mt-2 text-sm text-ink/60">Box model, type, color and tokens at a glance.</p></article>
+      <article class="rounded-2xl bg-white p-6 shadow-sm"><h3 class="text-lg font-semibold">Tune</h3><p class="mt-2 text-sm text-ink/60">Drag to scrub, click to type, pick from your palette.</p></article>
+      <article class="rounded-2xl bg-white p-6 shadow-sm"><h3 class="text-lg font-semibold">Ship</h3><p class="mt-2 text-sm text-ink/60">Send to the agent; the preview clears when it lands in code.</p></article>
+    </section>
+  </main>
+</body>
+</html>
