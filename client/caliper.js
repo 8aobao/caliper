@@ -173,6 +173,8 @@
     const color = (pre) => {
       const m = v.match(/^var\((--[\w-]+)\)$/);
       if (m) return `${pre}-${tokName(m[1]).replace(/^--/, '')}`;
+      const mix = v.match(/^color-mix\(in \w+, var\((--[\w-]+)\) ([\d.]+)%, transparent\)$/);
+      if (mix) return `${pre}-${tokName(mix[1]).replace(/^--/, '')}/${round(Number(mix[2]), 1)}`;
       const t = T.colorByHex.get(toHex(v));
       return t && t.startsWith('--color-') ? `${pre}-${tokName(t)}` : arb(pre);
     };
@@ -821,7 +823,9 @@
       }
     });
     function edit(initial) {
-      const inp = h('input', { class: 'num-in', value: initial ?? (cur == null ? '' : fmtNum(cur, spec.dec || 0)), spellcheck: false });
+      // Percent values (stored 0–1) are typed as percent: show 60, read 60 as 0.6.
+      const k = spec.typeScale || 1;
+      const inp = h('input', { class: 'num-in', value: initial ?? (cur == null ? '' : fmtNum(cur * k, k > 1 ? 0 : spec.dec || 0)), spellcheck: false });
       val.replaceWith(inp);
       tok.hidden = true;
       busy = true;
@@ -838,7 +842,7 @@
         const raw = inp.value.trim();
         if (ok && raw !== '') {
           const n = Number(raw);
-          if (Number.isFinite(n)) commit(n);
+          if (Number.isFinite(n)) commit(n / k);
           else spec.set(raw); // any CSS value: 1.5rem, auto, var(--x)…
         }
         sync();
@@ -1070,8 +1074,8 @@
         const hx = toHex(v);
         sw.firstChild.style.background = v;
         const to = S.edit.props[prop] && S.edit.props[prop].to;
-        const m = to && to.match(/^var\((--[\w-]+)\)$/);
-        const t = m ? m[1] : T.colorByHex.get(hx);
+        const m = to && to.match(/var\((--[\w-]+)\)/); // plain var() or a color-mix() of one
+        const t = m ? m[1] : T.colorByHex.get(hx) || (hx && T.colorByHex.get(hx.slice(0, 7)));
         if (shadow.activeElement !== hex) hex.value = hx || v;
         tok.textContent = t ? tokName(t).replace(/^--/, '') : '';
         pop.querySelectorAll('.sws button').forEach((b) => b.classList.toggle('on', b.style.background && toHex(b.style.background) === hx));
@@ -1080,6 +1084,41 @@
     return wrap;
   }
 
+
+  // A color's own transparency, apart from the element's opacity. Splits the computed color into
+  // its opaque base and alpha; writes var(--token) through color-mix when the base is a token
+  // (so Tailwind reads as border-ink/15), plain rgb() otherwise.
+  function splitAlpha(v) {
+    v = (v || '').trim();
+    if (!v || v === 'transparent') return { base: null, a: 0 };
+    let m = v.match(/^rgba?\(([^,]+),([^,]+),([^,]+)(?:,([^)]+))?\)$/);
+    if (m) return { base: `rgb(${m[1]},${m[2]},${m[3]})`, a: m[4] != null ? Number(m[4]) : 1 };
+    m = v.match(/^(.*?)\s*\/\s*([\d.]+%?)\s*\)$/);
+    if (m) return { base: m[1] + ')', a: m[2].endsWith('%') ? parseFloat(m[2]) / 100 : Number(m[2]) };
+    return { base: v, a: 1 };
+  }
+  function alpha(label, prop, key) {
+    return scrubber({
+      label, props: [prop], step: 0.01, dec: 2, min: 0, max: 1, hardMax: 1, unit: '%', perPx: 1, typeScale: 100,
+      fmt: (v) => Math.round(v * 100),
+      get: (c) => splitAlpha(c[key]).a,
+      set: (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n) || !S.sel) return;
+        const a = clamp(n, 0, 1);
+        const to = S.edit.props[prop] && S.edit.props[prop].to;
+        let tokenVar = to && (to.match(/var\((--[\w-]+)\)/) || [])[1];
+        const { base } = splitAlpha(cs(S.sel)[key]);
+        const hx = base && toHex(base);
+        if (!tokenVar && hx) tokenVar = T.colorByHex.get(hx.slice(0, 7));
+        if (tokenVar) setProp(prop, a >= 1 ? `var(${tokenVar})` : `color-mix(in srgb, var(${tokenVar}) ${round(a * 100, 1)}%, transparent)`);
+        else if (hx && hx !== 'transparent') {
+          const [r, g, b] = hexToRgba(hx.slice(0, 7));
+          setProp(prop, a >= 1 ? hx.slice(0, 7) : `rgb(${r} ${g} ${b} / ${round(a, 2)})`);
+        }
+      },
+    });
+  }
 
   function section(name, rows) {
     const sec = h('div', { class: 'sec' + (S.collapsed.has(name) ? ' closed' : '') });
@@ -1161,10 +1200,11 @@
           },
         }),
         color('Border', 'border-color'),
+        alpha('Border opacity', 'border-color', 'borderTopColor'),
       ]),
       section('Fill', [
         color('Fill', 'background-color'),
-        scrubber({ label: 'Opacity', props: ['opacity'], get: (c) => Number(c.opacity), set: (v) => setProp('opacity', v), step: 0.01, dec: 2, min: 0, max: 1, hardMax: 1, fmt: (v) => Math.round(v * 100), unit: '%', perPx: 1 }),
+        scrubber({ label: 'Opacity', props: ['opacity'], get: (c) => Number(c.opacity), set: (v) => setProp('opacity', v), step: 0.01, dec: 2, min: 0, max: 1, hardMax: 1, fmt: (v) => Math.round(v * 100), unit: '%', perPx: 1, typeScale: 100 }),
       ]),
     );
     return out.filter(Boolean);
