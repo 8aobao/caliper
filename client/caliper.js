@@ -446,7 +446,8 @@
   .bar { position: fixed; display: flex; touch-action: none; user-select: none; cursor: grab; align-items: center; gap: 2px; padding: 4px; background: rgba(20,20,20,.94); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging { cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging * { cursor: grabbing !important; }
-  .bar.collapsed .bb { padding: 0 9px; }
+  .bar.collapsed .bb { width: 30px; padding: 0; justify-content: center; position: relative; }
+  .bar.collapsed .badge { position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
   .bar .ib { width: 30px; height: 30px; border-radius: 999px; }
   .badge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: #ffb02e; color: #111; font-size: 10px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
   .bb { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: #bdbdbd; }
