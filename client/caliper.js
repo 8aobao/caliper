@@ -1482,7 +1482,7 @@
     bar.append(
       // While the bar is open Caliper is on: this is a status light, not a switch (collapse to stop).
       h('button', { class: 'bb solo on', 'data-tip': '⌥C', 'aria-label': 'Inspecting (⌥C closes)' }, icon('target')),
-      h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list')),
+      h('button', { class: 'bb', title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list')),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
       h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
       h('button', { class: 'ib', title: 'Collapse', onclick: () => setCollapsed(true) }, icon('collapse')),
@@ -1678,7 +1678,7 @@
               pill(e),
               h('button', { class: 'ib', title: 'Remove (drop the preview)', onclick: () => removeEdit(e) }, icon('trash')));
           }))
-        : h('div', { class: 'empty' }, 'No changes yet.', h('br'), 'Turn on Inspect (⌥C), click an element and drag a value.'),
+        : h('div', { class: 'empty' }, 'No changes yet.', h('br'), 'Click an element on the page to tune it.'),
     );
   }
 
