@@ -69,7 +69,6 @@
     x: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
     reset: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8a5 5 0 1 0 1.5-3.5M3 2.5V5h2.5"/></svg>',
     expand: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M8 2.5v11M2.5 8h11"/></svg>',
-    grip: '<svg viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="7" r="1.1"/><circle cx="6" cy="7" r="1.1"/><circle cx="2" cy="12" r="1.1"/><circle cx="6" cy="12" r="1.1"/></svg>',
     collapse: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg>',
     trash: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg>',
   };
@@ -443,15 +442,13 @@
   .tag-label { position: fixed; pointer-events: none; display: none; white-space: nowrap; background: #4f8cff; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 10.5px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
   .tag-label b { font-weight: 650; } .tag-label i { font-style: normal; opacity: .75; }
 
-  .bar { position: fixed; display: flex; touch-action: none; user-select: none; cursor: grab; align-items: center; gap: 2px; padding: 4px; background: rgba(20,20,20,.94); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.6); }
+  .bar { position: fixed; display: flex; touch-action: none; user-select: none; cursor: grab; align-items: center; gap: 2px; padding: 4px; background: rgba(20,20,20,.94); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging { cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging * { cursor: grabbing !important; }
-  .grip { display: inline-flex; width: 14px; height: 30px; align-items: center; justify-content: center; color: #5a5a5a; margin: 0 1px 0 2px; }
-  .bar:hover .grip { color: #8a8a8a; }
-  .bar.collapsed { padding: 4px; border-radius: 12px; }
-  .bar.collapsed .bb { padding: 0 8px; }
+  .bar.collapsed .bb { padding: 0 9px; }
+  .bar .ib { width: 30px; height: 30px; border-radius: 999px; }
   .badge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: #ffb02e; color: #111; font-size: 10px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
-  .bb { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border-radius: 8px; color: #bdbdbd; }
+  .bb { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: #bdbdbd; }
   .bb:hover { background: rgba(255,255,255,.07); color: #fff; }
   .bb.on { background: #4f8cff; color: #fff; }
   .bb.primary { background: #fff; color: #111; } .bb.primary:hover { background: #e6e6e6; }
@@ -1464,7 +1461,6 @@
       return;
     }
     bar.append(
-      h('span', { class: 'grip', title: 'Drag to move', html: ICON.grip }),
       h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Inspect (⌥C)', onclick: () => setInspect(!S.inspecting) }, icon('target'), 'Inspect', h('span', { class: 'kbd' }, '⌥C')),
       h('div', { class: 'sep' }),
       h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list'), h('span', { class: 'count' }, here.length)),
@@ -1557,8 +1553,8 @@
     window.addEventListener('pointercancel', up, true);
   });
   bar.addEventListener('dblclick', (ev) => {
-    // Double-click the grip: back to the default spot.
-    if (!ev.target.closest('.grip')) return;
+    // Double-click the bar itself (not a button): back to the default spot.
+    if (ev.target.closest('button')) return;
     barPos = null;
     lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), barPos });
     placeBar();

@@ -8,7 +8,7 @@ Click any element on your dev site, see the parameters that make it, tune them l
 - **Scope** — *This element* or *All matching* (same tag + classes, i.e. every instance of that component). Matches get dashed outlines.
 - **Save** — the preview survives reloads (localStorage). Unsaved drafts last for the tab session.
 - **Send to agent** (`⌘↵` in the note) — queues the change with selector, classes, text, React component names, before→after values, Tailwind suggestions and your note. When the agent resolves it, the override clears itself (the code now carries it).
-- **Toolbar** — drag it anywhere (from any part of it; double-click the grip to reset), collapse it to a small chip with `‹`; both are remembered. change list (toggle each preview, jump to it, remove), 👁 original vs. edited, *Send N* for everything unsent, connection dot.
+- **Toolbar** — click, hold and drag it anywhere (no handle; any part of it works, buttons included; double-click its background to reset), collapse it to a small chip with `‹`; both are remembered. change list (toggle each preview, jump to it, remove), 👁 original vs. edited, *Send N* for everything unsent, connection dot.
 - **Copy** — the same agent prompt to the clipboard, for any agent, no server needed.
 
 ## Setup
