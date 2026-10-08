@@ -1191,11 +1191,10 @@
     const head = h('div', { class: 'head' },
       h('div', { class: 'hrow' },
         h('div', { class: 'title' }, h('span', { class: 't' }, `<${el.localName}>`), h('span', { class: 'c', title: e.classes }, e.classes || 'no classes')),
-        h('button', { class: 'ib', title: 'Select parent (⌥↑)', onclick: () => selectRel('up') }, icon('up')),
-        h('button', { class: 'ib', title: 'Select first child (⌥↓)', onclick: () => selectRel('down') }, icon('down')),
         h('button', { class: 'ib', title: 'Close (Esc)', onclick: deselect }, icon('x')),
       ),
-      h('div', { class: 'crumbs', title: e.sourceHint || '' }, e.components.length ? [h('b', {}, e.components[0]), e.components.slice(1, 4).map((n) => ' ‹ ' + n)] : e.text ? `“${e.text.slice(0, 50)}”` : e.selector),
+      // Component names only (React); no text/selector echo.
+      e.components.length > 0 && h('div', { class: 'crumbs', title: e.sourceHint || '' }, h('b', {}, e.components[0]), e.components.slice(1, 4).map((n) => ' ‹ ' + n)),
       h('div', { class: 'scope' },
         h('button', { class: e.scope === 'one' ? 'on' : '', onclick: () => setScope('one') }, 'This element'),
         h('button', { class: e.scope === 'all' ? 'on' : '', disabled: !e.classSelector, title: e.classSelector || 'Element has no classes', onclick: () => setScope('all') }, `All matching (${count})`),
@@ -1236,13 +1235,13 @@
     const e = S.edit;
     if (!e || !statusEl) return;
     const n = Object.keys(e.props).length;
-    let msg = n ? `${n} change${n > 1 ? 's' : ''} · live preview` : '';
+    // Only the agent's side of things; no explainer text.
+    let msg = '';
     let cls = '';
     if (e.agent === 'pending') (msg = 'Sent · waiting for the agent'), (cls = 'agent');
     else if (e.agent === 'acknowledged') (msg = 'Agent is applying this…'), (cls = 'agent');
     else if (e.agent === 'dismissed') (msg = `Agent declined: ${e.reply || 'no reason given'}`), (cls = 'warn');
     else if (e.agent === 'modified') (msg = 'Edited since sending — send again to update'), (cls = 'warn');
-    else if (n && e.saved && !e.dirty) msg = 'Saved · this preview stays on reload';
     statusEl.textContent = msg;
     statusEl.className = 'status ' + cls;
     footBtns.reset.disabled = footBtns.copy.disabled = footBtns.save.disabled = !n;
