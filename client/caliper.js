@@ -1163,7 +1163,6 @@
       section('Fill', [
         color('Fill', 'background-color'),
         scrubber({ label: 'Opacity', props: ['opacity'], get: (c) => Number(c.opacity), set: (v) => setProp('opacity', v), step: 0.01, dec: 2, min: 0, max: 1, hardMax: 1, fmt: (v) => Math.round(v * 100), unit: '%', perPx: 1 }),
-        text('Shadow', 'box-shadow'),
       ]),
     );
     return out.filter(Boolean);
