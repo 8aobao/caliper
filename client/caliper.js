@@ -576,6 +576,40 @@
     setTimeout(() => t.remove(), ms + 400);
   }
 
+  // Does this element own its text, or does it just contain other elements that do? Only the
+  // owner gets Typography: direct text, or text wrapped only in text-level tags (<span>, <a>,
+  // <strong>…), as in a button with a label span or a paragraph with a link. A card holding an
+  // <h3> and a <p> doesn't own their type; select those to tune it.
+  const TEXT_LEVEL = /^(a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var|label|font|del|ins)$/;
+  const NO_TEXT_INPUT = /^(checkbox|radio|range|color|file|hidden|image|submit|reset|button)$/;
+  // A text-level tag counts as its own component when it isn't flowing inline and has a box look.
+  // (Inline <code> with a background inside a paragraph is still the paragraph's text.)
+  function isBox(n) {
+    const c = cs(n);
+    if (c.display === 'inline' || c.display === 'contents') return false;
+    const painted = (v) => v && v !== 'transparent' && !/rgba?\([^)]*,\s*0\)$/.test(v) && !/\/\s*0\)$/.test(v);
+    return ['Top', 'Right', 'Bottom', 'Left'].some((sd) => px(c['padding' + sd]) > 0 || px(c['border' + sd + 'Width']) > 0) || painted(c.backgroundColor) || c.backgroundImage !== 'none';
+  }
+  function ownsText(el) {
+    const tag = el.localName;
+    if (el instanceof SVGElement) return tag === 'text' || tag === 'tspan' || tag === 'textPath';
+    if (tag === 'textarea' || tag === 'select') return true;
+    if (tag === 'input') return !NO_TEXT_INPUT.test(el.type) || ((el.type === 'submit' || el.type === 'button' || el.type === 'reset') && !!el.value);
+    let found = false;
+    const walk = (node) => {
+      for (const n of node.childNodes) {
+        if (n.nodeType === 3) {
+          if (n.textContent.trim()) found = true;
+        } else if (n.nodeType === 1 && (n.textContent || '').trim()) {
+          if (!TEXT_LEVEL.test(n.localName)) return false; // text lives in a block of its own
+          if (isBox(n)) return false; // an <a>/<span> styled as its own component (a button, a chip)
+          if (walk(n) === false) return false;
+        }
+      }
+    };
+    return walk(el) !== false && found;
+  }
+
   // ---------------------------------------------------------------- overlays
   function sides(c, k) {
     return ['Top', 'Right', 'Bottom', 'Left'].map((s) => px(c[k.replace('$', s)]));
@@ -603,7 +637,7 @@
     marginBox.style.borderWidth = m.map((v) => v + 'px').join(' ');
     place(padBox, { left: r.left + b[3], top: r.top + b[0], width: Math.max(0, r.width - b[1] - b[3]), height: Math.max(0, r.height - b[0] - b[2]) });
     padBox.style.borderWidth = p.map((v) => Math.max(0, v) + 'px').join(' ');
-    const hasText = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    const hasText = ownsText(el);
     hoverLabel.innerHTML = '';
     hoverLabel.append(
       h('b', {}, el.localName + (el.classList[0] ? '.' + [...el.classList].slice(0, 3).join('.') : '')),
@@ -869,8 +903,7 @@
   function sectionsFor(el) {
     const c = cs(el);
     const out = [];
-    const hasText = !!(el.innerText || el.textContent || '').trim();
-    if (hasText) {
+    if (ownsText(el)) {
       const fams = fontFamilies();
       out.push(
         section('Typography', [
@@ -907,6 +940,8 @@
         quad('Padding', ['padding-top', 'padding-right', 'padding-bottom', 'padding-left'], { tok: spTok }),
         quad('Margin', ['margin-top', 'margin-right', 'margin-bottom', 'margin-left'], { allowNegative: true, min: -32, tok: spTok }),
       ]),
+      // width/height do nothing on inline boxes (a <span> or <a> in running text).
+      !(c.display === 'inline' && !/^(img|svg|video|canvas|iframe|input|textarea|select|object|embed)$/.test(el.localName)) &&
       section('Size', [
         h('div', { class: 'grid2' },
           num('W', 'width', { max: 800, tok: spTok }),
