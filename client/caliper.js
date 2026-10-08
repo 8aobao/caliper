@@ -450,19 +450,20 @@
   .bar.dragging { cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging * { cursor: grabbing !important; }
   .bar > * { flex-shrink: 0; }
-  .bar:not(.collapsed) { gap: 0; }
-  .bar:not(.collapsed) .bb:not(.on):not(.primary) { padding: 0 7px; }
-  .bar:not(.collapsed) .ib { width: 26px; }
+  .bar { gap: 0; }
+  .bar .bb:not(.main):not(.primary) { padding: 0 7px; }
+  .bar .ib { width: 26px; }
   .bar.morphing { overflow: hidden; }
-  .bar.collapsed .bb { width: 30px; padding: 0; justify-content: center; position: relative; }
-  .bar.collapsed .badge { position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
+  .bb.main { width: 30px; padding: 0; justify-content: center; position: relative; }
+  .bb.main.on { cursor: default; }
+  .bb.main.on:hover { background: #4f8cff; }
+  .bar.collapsed .badge { animation: caliper-fade .2s ease-out; position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
   .bar .ib { width: 30px; height: 30px; border-radius: 999px; }
   .badge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: #ffb02e; color: #111; font-size: 10px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
-  .bb { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: #bdbdbd; }
+  .bb { transition: background-color .28s ease, color .28s ease; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px; border-radius: 999px; color: #bdbdbd; }
   .bb:hover { background: rgba(255,255,255,.07); color: #fff; }
   .bb.on { background: #4f8cff; color: #fff; }
-  .bb.solo { width: 30px; padding: 0; justify-content: center; cursor: default; }
-  .bb.solo.on:hover { background: #4f8cff; }
+  @keyframes caliper-fade { from { opacity: 0; } }
   /* Shortcut hint: only on hover, above the bar (below it when the bar sits near the top). */
   [data-tip] { position: relative; }
   [data-tip]:hover::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); padding: 3px 8px; border-radius: 999px; background: rgba(20,20,20,.94); color: #e9e9e9; font-size: 11px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.3), 0 0 0 .5px rgba(255,255,255,.08); }
@@ -1465,23 +1466,31 @@
   }
 
   // ---------------------------------------------------------------- toolbar + list
+  // The crosshair is one persistent button in both states (collapsed circle and open bar), so
+  // opening/closing never redraws it: only its blue fill fades while the bar grows or shrinks.
+  let mainBtn = null;
   function renderBar() {
     const here = S.edits.filter(hasProps);
     const unsent = here.filter((e) => !e.agent || e.agent === 'modified' || e.agent === 'dismissed');
-    bar.innerHTML = '';
+    if (!mainBtn) mainBtn = h('button', { 'data-tip': '⌥C' }, icon('target'));
+    mainBtn.className = 'bb main' + (S.barCollapsed ? '' : ' on');
+    mainBtn.setAttribute('aria-label', S.barCollapsed ? 'Activate Caliper (⌥C)' : 'Inspecting (⌥C closes)');
+    // While the bar is open Caliper is on: a status light, not a switch (collapse to stop).
+    mainBtn.onclick = S.barCollapsed ? () => setCollapsed(false) : null;
+    mainBtn.querySelector('.badge')?.remove();
+    if (S.barCollapsed && here.length) mainBtn.append(h('span', { class: 'badge' }, here.length));
     bar.classList.toggle('collapsed', S.barCollapsed);
+    // Swap the items around the crosshair without ever detaching it (detaching would skip the
+    // fill transition).
+    for (const n of [...bar.children]) if (n !== mainBtn) n.remove();
+    if (!mainBtn.isConnected) bar.prepend(mainBtn);
     if (S.barCollapsed) {
-      bar.append(
-        h('button', { class: 'bb', 'data-tip': '⌥C', 'aria-label': 'Activate Caliper (⌥C)', onclick: () => setCollapsed(false) },
-          icon('target'), here.length ? h('span', { class: 'badge' }, here.length) : ''),
-      );
+      mainBtn.style.marginLeft = mainBtn.style.marginRight = '0px';
       placeBar();
       syncFoot();
       return;
     }
     bar.append(
-      // While the bar is open Caliper is on: this is a status light, not a switch (collapse to stop).
-      h('button', { class: 'bb solo on', 'data-tip': '⌥C', 'aria-label': 'Inspecting (⌥C closes)' }, icon('target')),
       h('button', { class: 'bb', title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list')),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
       h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
@@ -1529,39 +1538,35 @@
     });
   }
 
-  // Morph between the chip and the full bar: the size and position glide while the old
-  // contents fade out and the new ones fade in.
+  // Open/close: the bar's width and position glide; the crosshair stays put (only its fill
+  // fades, via CSS); the other items fade in as the bar opens, or fade out while it closes.
   let barAnim = null;
   function animateBar(change) {
     const from = bar.getBoundingClientRect();
-    const oldNodes = [...bar.childNodes];
-    const wasCollapsed = bar.classList.contains('collapsed');
+    const before = [...bar.children].filter((n) => n !== mainBtn);
     change();
-    const isCollapsed = bar.classList.contains('collapsed');
     const to = bar.getBoundingClientRect();
     if (matchMedia('(prefers-reduced-motion: reduce)').matches || (from.width === to.width && from.left === to.left)) return;
-    const newNodes = [...bar.childNodes];
     if (barAnim) barAnim.cancel();
-    bar.replaceChildren(...oldNodes);
-    bar.classList.toggle('collapsed', wasCollapsed); // old contents keep their own styling until the swap
+    const after = [...bar.children].filter((n) => n !== mainBtn);
+    const leaving = before.filter((n) => !after.includes(n));
     bar.classList.add('morphing');
-    const fadeOut = 110;
-    barAnim = bar.animate(
+    if (leaving.length) {
+      bar.append(...leaving); // keep them in place, clipped by the shrinking bar, while they fade
+      leaving.forEach((n) => n.animate([{ opacity: cs(n).opacity }, { opacity: 0 }], { duration: 160, easing: 'ease-out', fill: 'forwards' }));
+    }
+    // End at each item's own opacity (a disabled Send button stays dimmed, no flash).
+    after.forEach((n) => n.animate([{ opacity: 0 }, { opacity: cs(n).opacity }], { duration: 240, delay: 70, easing: 'ease-out', fill: 'backwards' }));
+    const anim = (barAnim = bar.animate(
       [{ width: from.width + 'px', left: from.left + 'px', top: from.top + 'px' }, { width: to.width + 'px', left: to.left + 'px', top: to.top + 'px' }],
       { duration: 340, easing: 'cubic-bezier(.32,.72,0,1)' },
-    );
-    oldNodes.forEach((n) => n.animate && n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeOut, fill: 'forwards' }));
-    const anim = barAnim;
-    setTimeout(() => {
-      if (barAnim !== anim || !oldNodes.every((n) => n.parentNode === bar)) return; // re-rendered meanwhile
-      bar.replaceChildren(...newNodes);
-      bar.classList.toggle('collapsed', isCollapsed);
-      newNodes.forEach((n) => n.animate && n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' }));
-    }, fadeOut);
-    anim.onfinish = anim.oncancel = () => {
+    ));
+    const done = () => {
+      leaving.forEach((n) => n.remove());
       if (barAnim === anim) barAnim = null;
       bar.classList.remove('morphing');
     };
+    anim.onfinish = anim.oncancel = done;
   }
 
   // Toolbar position: null = bottom centre; otherwise its top-left, kept inside the viewport.
@@ -1588,7 +1593,7 @@
     if (list.hidden) return;
     const r = bar.getBoundingClientRect();
     const w = 340;
-    list.style.left = clamp(r.left + r.width / 2 - w / 2, 8, innerWidth - w - 8) + 'px';
+    list.style.left = clamp(r.left, 8, innerWidth - w - 8) + 'px'; // aligned to the bar's left edge
     if (r.top > innerHeight / 2) {
       list.style.top = '';
       list.style.bottom = innerHeight - r.top + 8 + 'px';
