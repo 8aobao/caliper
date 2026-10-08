@@ -4,7 +4,7 @@ Click any element on your dev site, see the parameters that make it, tune them l
 
 - **Inspect** (`⌥C`) — hover shows the box model (margin / padding / content) plus type at a glance; click selects.
 - **Panel** — Typography (font, size, weight, leading, tracking, color, align, case), Layout (flex/grid direction, align, justify, gap), Spacing (padding / margin, X/Y or per side), Size, Shape (radius, border), Fill (background, opacity, shadow). Token names from your CSS variables (Tailwind v4 `@theme`) show next to values, and the color picker offers your palette.
-- **Tune** — drag any value to scrub (⇧ ×10, ⌥ ×0.1), click it to type (any CSS: `1.5rem`, `auto`, `var(--x)`), arrow keys nudge. Orange dot = changed; click it to reset.
+- **Tune** — drag any value to scrub (⇧ ×10, ⌥ ×0.1), click it to type (any CSS: `1.5rem`, `auto`, `var(--x)`), arrow keys nudge. Orange dot = changed; click it to reset. Tab / ⇧Tab cycle through the values only (wrapping, skipping collapsed sections); on a focused value just type a number, ←/→ step through option groups.
 - **Scope** — *This element* or *All matching* (same tag + classes, i.e. every instance of that component). Matches get dashed outlines.
 - **Save** — the preview survives reloads (localStorage). Unsaved drafts last for the tab session.
 - **Send to agent** (`⌘↵` in the note) — queues the change with selector, classes, text, React component names, before→after values, Tailwind suggestions and your note. When the agent resolves it, the override clears itself (the code now carries it).

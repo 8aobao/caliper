@@ -478,7 +478,8 @@
 
   .scrub { min-width: 0; position: relative; height: 26px; border-radius: 7px; background: #262626; display: flex; align-items: center; gap: 6px; padding: 0 8px; cursor: ew-resize; user-select: none; overflow: hidden; outline: none; }
   .scrub:hover { background: #2c2c2c; }
-  .scrub:focus-visible { box-shadow: 0 0 0 1.5px #4f8cff; }
+  .scrub:focus-visible, .seg:focus-visible { box-shadow: 0 0 0 1.5px #4f8cff; outline: none; }
+  .seg { outline: none; }
   .scrub.drag { background: #2f2f2f; }
   .scrub .fill { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.07); pointer-events: none; }
   .scrub.drag .fill { background: rgba(79,140,255,.28); }
@@ -693,7 +694,7 @@
     const val = h('span', { class: 'val' });
     const tok = h('span', { class: 'tok' });
     const dot = h('span', { class: 'dot', title: 'Reset' });
-    const box = h('div', { class: 'scrub' + (mini ? ' mini' : ''), tabindex: 0, title: spec.props.join(', ') }, fill, dot, h('span', { class: 'lbl' }, spec.label), tok, val);
+    const box = h('div', { class: 'scrub' + (mini ? ' mini' : ''), tabindex: 0, 'data-param': '', title: spec.props.join(', ') }, fill, dot, h('span', { class: 'lbl' }, spec.label), tok, val);
     let cur = null;
     let busy = false;
     const show = (v) => {
@@ -758,17 +759,22 @@
       } else if (e.key === 'Enter') {
         e.preventDefault();
         edit();
+      } else if (/^[\d.-]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        // Tabbed in and typing: start editing with that keystroke.
+        e.preventDefault();
+        edit(e.key);
       }
     });
-    function edit() {
-      const inp = h('input', { class: 'num-in', value: cur == null ? '' : fmtNum(cur, spec.dec || 0), spellcheck: false });
+    function edit(initial) {
+      const inp = h('input', { class: 'num-in', value: initial ?? (cur == null ? '' : fmtNum(cur, spec.dec || 0)), spellcheck: false });
       val.replaceWith(inp);
       tok.hidden = true;
       busy = true;
       inp.focus();
-      inp.select();
+      if (initial == null) inp.select();
+      else inp.setSelectionRange(inp.value.length, inp.value.length);
       let done = false;
-      const finish = (ok) => {
+      const finish = (ok, refocus = true) => {
         if (done) return;
         done = true;
         busy = false;
@@ -781,14 +787,15 @@
           else spec.set(raw); // any CSS value: 1.5rem, auto, var(--x)…
         }
         sync();
-        box.focus();
+        if (refocus) box.focus();
       };
       inp.addEventListener('keydown', (e) => {
         e.stopPropagation();
         if (e.key === 'Enter') finish(true);
         if (e.key === 'Escape') finish(false);
       });
-      inp.addEventListener('blur', () => finish(true));
+      // Focus moving on (Tab, a click elsewhere) commits without pulling focus back.
+      inp.addEventListener('blur', (e) => finish(true, !e.relatedTarget));
       inp.addEventListener('pointerdown', (e) => e.stopPropagation());
     }
     function sync() {
@@ -829,13 +836,23 @@
 
   function seg(label, prop, options, read) {
     const btns = options.map(([v, l]) => h('button', { title: v, onclick: () => setProp(prop, v) }, l));
-    const r = row(label, [prop], h('div', { class: 'seg' }, btns));
-    controls.push({ sync: () => { const cur = (read || ((c) => c.getPropertyValue(prop)))(cs(S.sel)); btns.forEach((b, i) => b.classList.toggle('on', options[i][0] === cur)); } });
+    const group = h('div', { class: 'seg', tabindex: 0, 'data-param': '', title: prop + ' (←/→)' }, btns);
+    const r = row(label, [prop], group);
+    let idx = -1;
+    group.addEventListener('keydown', (e) => {
+      const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const n = options.length;
+      setProp(prop, options[idx < 0 ? (d > 0 ? 0 : n - 1) : (idx + d + n) % n][0]);
+    });
+    controls.push({ sync: () => { const cur = (read || ((c) => c.getPropertyValue(prop)))(cs(S.sel)); idx = options.findIndex((o) => o[0] === cur); btns.forEach((b, i) => b.classList.toggle('on', i === idx)); } });
     return r;
   }
 
   function text(label, prop, o = {}) {
-    const inp = h('input', { class: 'txt', spellcheck: false, list: o.list || null });
+    const inp = h('input', { class: 'txt', spellcheck: false, 'data-param': '', list: o.list || null });
     inp.addEventListener('change', () => setProp(prop, inp.value));
     inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); });
     controls.push({ sync: () => { if (shadow.activeElement !== inp) inp.value = (o.read || ((c) => c.getPropertyValue(prop)))(cs(S.sel)); } });
@@ -844,7 +861,7 @@
 
   function color(label, prop) {
     const sw = h('button', { class: 'sw', title: 'Tokens & picker' }, h('i'));
-    const hex = h('input', { class: 'txt', spellcheck: false });
+    const hex = h('input', { class: 'txt', spellcheck: false, 'data-param': '' });
     const tok = h('span', { class: 'tok' });
     const native = h('input', { type: 'color', class: 'native' });
     const r = row(label, [prop], [sw, hex, tok, native]);
@@ -1018,6 +1035,8 @@
     const foot = h('div', { class: 'foot' }, note, statusEl, h('div', { class: 'acts' }, footBtns.reset, footBtns.copy, footBtns.save, footBtns.send));
     panel.append(head, body, foot);
     body.scrollTop = scroll;
+    // Tab walks parameters only; buttons, toggles and the note stay clickable but out of the order.
+    panel.querySelectorAll('button, textarea, input:not([data-param])').forEach((x) => (x.tabIndex = -1));
 
     if (!panelPos) {
       panel.style.left = innerWidth - 292 - 16 + 'px';
@@ -1069,6 +1088,22 @@
       head.addEventListener('pointerup', up);
     });
   }
+
+  // Tab / ⇧Tab cycle through the visible parameter controls (skipping collapsed sections) and wrap,
+  // instead of wandering into the panel's buttons, the toolbar and the page.
+  panel.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || e.metaKey || e.ctrlKey || e.altKey) return;
+    const stops = [...panel.querySelectorAll('[data-param]')].filter((x) => !x.closest('.sec.closed') && x.getClientRects().length);
+    if (!stops.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const active = shadow.activeElement;
+    const i = stops.findIndex((x) => x === active || x.contains(active));
+    const next = stops[i < 0 ? (e.shiftKey ? stops.length - 1 : 0) : (i + (e.shiftKey ? -1 : 1) + stops.length) % stops.length];
+    next.focus({ preventScroll: true });
+    next.scrollIntoView({ block: 'nearest' });
+    if (next.select) next.select();
+  }, true);
 
   function setScope(scope) {
     const e = S.edit;
