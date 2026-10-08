@@ -2,13 +2,14 @@
 
 Click any element on your dev site, see the parameters that make it, tune them live, then **save the preview** or **send it to the agent** to make it real in code.
 
-- **Inspect** (`⌥C`) — hover shows the box model (margin / padding / content) plus type at a glance; click selects.
+- **Activate** — Caliper loads collapsed and inactive (a small chip). Click it or press `⌥C` to activate: the bar expands and Inspect turns on. Collapsing it (or pressing Esc until nothing is left open) deactivates it again. Saved previews apply either way.
+- **Inspect** (`⌥C`) — hover shows the box model in tone-on-tone blue (margin lightest, padding a step up, content a faint fill, following rounded corners) plus type at a glance; click selects.
 - **Panel** — Typography (font, size, weight, leading, tracking, color, align, case), Layout (flex/grid direction, align, justify, gap), Spacing (padding / margin, X/Y or per side), Size, Shape (radius, border), Fill (background, opacity, shadow). Token names from your CSS variables (Tailwind v4 `@theme`) show next to values. Clicking a color swatch lists the colors used on the page (most used first, written as `var(--token)` when one matches) plus any other tokens; *Custom color* opens an HSL picker (saturation × lightness plane, hue and alpha tracks, H/S/L/A values). Box values use Figma-style side icons.
 - **Tune** — drag any value to scrub (⇧ ×10, ⌥ ×0.1), click it to type (any CSS: `1.5rem`, `auto`, `var(--x)`), arrow keys nudge. Orange dot = changed; click it to reset. Tab / ⇧Tab cycle through the values only (wrapping, skipping collapsed sections); on a focused value just type a number, ←/→ step through option groups.
 - **Scope** — *This element* or *All matching* (same tag + classes, i.e. every instance of that component). Matches get dashed outlines.
 - **Save** — the preview survives reloads (localStorage). Unsaved drafts last for the tab session.
 - **Send to agent** (`⌘↵` in the note) — queues the change with selector, classes, text, React component names, before→after values, Tailwind suggestions and your note. When the agent resolves it, the override clears itself (the code now carries it).
-- **Toolbar** — click, hold and drag it anywhere (no handle; any part of it works, buttons included; double-click its background to reset), collapse it to a small chip with `‹`; both are remembered. change list (toggle each preview, jump to it, remove), 👁 original vs. edited, *Send N* for everything unsent, connection dot.
+- **Toolbar** — click, hold and drag it anywhere (no handle; any part of it works, buttons included; double-click its background to reset), collapse it to a small chip with `‹`; its position is remembered. change list (toggle each preview, jump to it, remove), 👁 original vs. edited, *Send N* for everything unsent, connection dot.
 - **Copy** — the same agent prompt to the clipboard, for any agent, no server needed.
 
 ## Setup

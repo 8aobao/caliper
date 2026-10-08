@@ -324,7 +324,7 @@
     online: false,
     listOpen: false,
     collapsed: new Set(lsGet(UI_KEY, {}).collapsed || []),
-    barCollapsed: !!lsGet(UI_KEY, {}).barCollapsed,
+    barCollapsed: true, // Caliper starts inactive (collapsed); activating it expands the bar
     expanded: new Set(),
     colorOpen: null,
     hslOpen: false,
@@ -435,8 +435,9 @@
   input, textarea { font: inherit; color: inherit; }
 
   .hl { position: fixed; pointer-events: none; display: none; }
-  .hl.margin { border-style: solid; border-color: rgba(255,155,60,.28); }
-  .hl.pad { border-style: solid; border-color: rgba(110,210,120,.32); background: rgba(80,150,255,.22); background-clip: content-box; outline: 1px solid rgba(80,150,255,.9); }
+  /* Hover: one blue, three opacities: margin lightest, padding a step up, content a faint fill. */
+  .hl.margin { border-style: solid; border-color: rgba(79,140,255,.08); }
+  .hl.pad { border-style: solid; border-color: rgba(79,140,255,.2); background: rgba(79,140,255,.1); background-clip: content-box; outline: 1px solid rgba(79,140,255,.7); }
   .hl.sel { outline: 1.5px solid #4f8cff; outline-offset: 0; box-shadow: 0 0 0 4px rgba(79,140,255,.15); }
   .hl.match { outline: 1px dashed rgba(79,140,255,.85); }
   .tag-label { position: fixed; pointer-events: none; display: none; white-space: nowrap; background: #4f8cff; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 10.5px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
@@ -670,6 +671,7 @@
     marginBox.style.borderWidth = m.map((v) => v + 'px').join(' ');
     place(padBox, { left: r.left + b[3], top: r.top + b[0], width: Math.max(0, r.width - b[1] - b[3]), height: Math.max(0, r.height - b[0] - b[2]) });
     padBox.style.borderWidth = p.map((v) => Math.max(0, v) + 'px').join(' ');
+    padBox.style.borderRadius = c.borderRadius; // follow rounded corners (cards, pills)
     const hasText = ownsText(el);
     hoverLabel.innerHTML = '';
     hoverLabel.append(
@@ -1453,7 +1455,7 @@
     bar.classList.toggle('collapsed', S.barCollapsed);
     if (S.barCollapsed) {
       bar.append(
-        h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Expand Caliper (drag to move · ⌥C inspects)', onclick: () => setCollapsed(false) },
+        h('button', { class: 'bb', title: 'Activate Caliper (⌥C)', onclick: () => setCollapsed(false) },
           icon('target'), here.length ? h('span', { class: 'badge' }, here.length) : ''),
       );
       placeBar();
@@ -1472,12 +1474,14 @@
     syncFoot();
   }
 
+  // Collapsed = inactive: no inspecting, no selection, no list. Expanding activates Caliper and
+  // goes straight into Inspect. Saved/sent previews keep applying either way.
   function setCollapsed(on) {
     S.barCollapsed = on;
-    if (on) S.listOpen = false;
-    lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), barCollapsed: on });
+    S.listOpen = false;
+    if (on && S.sel) deselect();
     renderList();
-    renderBar();
+    setInspect(!on);
   }
 
   // Toolbar position: null = bottom centre; otherwise its top-left, kept inside the viewport.
@@ -1639,7 +1643,8 @@
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.composedPath()[0] || {}).tagName) || (e.composedPath()[0] || {}).isContentEditable;
     if (e.altKey && e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
-      setInspect(!S.inspecting);
+      if (S.barCollapsed) setCollapsed(false);
+      else setInspect(!S.inspecting);
       return;
     }
     if (typing) return;
@@ -1648,6 +1653,7 @@
       else if (S.listOpen) (S.listOpen = false), renderList(), renderBar();
       else if (S.sel) deselect();
       else if (S.inspecting) setInspect(false);
+      else if (!S.barCollapsed) setCollapsed(true);
       else return;
       e.preventDefault();
     } else if (e.altKey && S.sel && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
