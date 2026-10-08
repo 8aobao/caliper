@@ -455,7 +455,6 @@
   .bar .ib { width: 26px; }
   .bar.morphing { overflow: hidden; }
   .bb.main { width: 30px; padding: 0; justify-content: center; position: relative; }
-  .bb.main.on { cursor: default; }
   .bb.main.on:hover { background: #4f8cff; }
   .bar.collapsed .badge { animation: caliper-fade .2s ease-out; position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
   .bar .ib { width: 30px; height: 30px; border-radius: 999px; }
@@ -1474,9 +1473,9 @@
     const unsent = here.filter((e) => !e.agent || e.agent === 'modified' || e.agent === 'dismissed');
     if (!mainBtn) mainBtn = h('button', { 'data-tip': '⌥C' }, icon('target'));
     mainBtn.className = 'bb main' + (S.barCollapsed ? '' : ' on');
-    mainBtn.setAttribute('aria-label', S.barCollapsed ? 'Activate Caliper (⌥C)' : 'Inspecting (⌥C closes)');
-    // While the bar is open Caliper is on: a status light, not a switch (collapse to stop).
-    mainBtn.onclick = S.barCollapsed ? () => setCollapsed(false) : null;
+    mainBtn.setAttribute('aria-label', S.barCollapsed ? 'Activate Caliper (⌥C)' : 'Close Caliper (⌥C)');
+    // While the bar is open Caliper is on; clicking the crosshair again closes it (same as ‹ / ⌥C).
+    mainBtn.onclick = () => setCollapsed(!S.barCollapsed);
     mainBtn.querySelector('.badge')?.remove();
     if (S.barCollapsed && here.length) mainBtn.append(h('span', { class: 'badge' }, here.length));
     bar.classList.toggle('collapsed', S.barCollapsed);
