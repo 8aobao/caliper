@@ -465,7 +465,15 @@
   .sh:hover { color: #ddd; }
   .sh .chev { transition: transform .15s; width: 10px; height: 10px; display: inline-flex; } .sh .chev svg { width: 100%; height: 100%; }
   .sec.closed .chev { transform: rotate(-90deg); }
-  .sec.closed .sb { display: none; }
+  /* Height animates via grid rows 1fr ↔ 0fr (works for any content height, no measuring). */
+  .sbw { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .26s cubic-bezier(.2,.8,.2,1); }
+  .sbi { min-height: 0; overflow: hidden; }
+  .sbi > .sb { transition: opacity .2s ease, transform .26s cubic-bezier(.2,.8,.2,1); }
+  .sec.closed .sbw { grid-template-rows: 0fr; }
+  .sec.closed .sbi > .sb { opacity: 0; transform: translateY(-4px); }
+  .sec.closed .sbi { visibility: hidden; transition: visibility 0s .26s; }
+  .sh .chev { transition: transform .26s cubic-bezier(.2,.8,.2,1) !important; }
+  @media (prefers-reduced-motion: reduce) { .sbw, .sbi > .sb, .sh .chev { transition: none !important; } }
   .sb { padding: 0 10px 6px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; }
 
   .scrub { min-width: 0; position: relative; height: 26px; border-radius: 7px; background: #262626; display: flex; align-items: center; gap: 6px; padding: 0 8px; cursor: ew-resize; user-select: none; overflow: hidden; outline: none; }
@@ -841,7 +849,7 @@
     const sec = h('div', { class: 'sec' + (S.collapsed.has(name) ? ' closed' : '') });
     sec.append(
       h('button', { class: 'sh', onclick: () => { S.collapsed.has(name) ? S.collapsed.delete(name) : S.collapsed.add(name); lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), collapsed: [...S.collapsed] }); sec.classList.toggle('closed'); } }, name, h('span', { class: 'chev', html: '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2.5 4l2.5 2.5L7.5 4"/></svg>' })),
-      h('div', { class: 'sb' }, rows),
+      h('div', { class: 'sbw' }, h('div', { class: 'sbi' }, h('div', { class: 'sb' }, rows))),
     );
     return sec;
   }
