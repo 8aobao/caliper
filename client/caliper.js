@@ -435,9 +435,10 @@
   input, textarea { font: inherit; color: inherit; }
 
   .hl { position: fixed; pointer-events: none; display: none; }
-  /* Hover: one blue, three opacities: margin lightest, padding a step up, content a faint fill. */
-  .hl.margin { border-style: solid; border-color: rgba(79,140,255,.08); }
-  .hl.pad { border-style: solid; border-color: rgba(79,140,255,.2); background: rgba(79,140,255,.1); background-clip: content-box; outline: 1px solid rgba(79,140,255,.7); }
+  /* Hover: three stacked layers of one faint blue (margin box, border box, content box), so the
+     margin reads lightest, padding stronger and content strongest purely from the overlap. */
+  .hl.margin, .hl.pad, .hl.content { background: rgba(79,140,255,.11); }
+  .hl.pad { outline: 1px solid rgba(79,140,255,.65); }
   .hl.sel { outline: 1.5px solid #4f8cff; outline-offset: 0; box-shadow: 0 0 0 4px rgba(79,140,255,.15); }
   .hl.match { outline: 1px dashed rgba(79,140,255,.85); }
   .tag-label { position: fixed; pointer-events: none; display: none; white-space: nowrap; background: #4f8cff; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 10.5px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
@@ -446,6 +447,8 @@
   .bar { position: fixed; display: flex; touch-action: none; user-select: none; cursor: grab; align-items: center; gap: 2px; padding: 4px; background: rgba(20,20,20,.94); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging { cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); }
   .bar.dragging * { cursor: grabbing !important; }
+  .bar > * { flex-shrink: 0; }
+  .bar.morphing { overflow: hidden; }
   .bar.collapsed .bb { width: 30px; padding: 0; justify-content: center; position: relative; }
   .bar.collapsed .badge { position: absolute; top: -7px; right: -7px; box-shadow: 0 0 0 2px rgba(20,20,20,.94); }
   .bar .ib { width: 30px; height: 30px; border-radius: 999px; }
@@ -591,13 +594,14 @@
 
   const marginBox = h('div', { class: 'hl margin' });
   const padBox = h('div', { class: 'hl pad' });
+  const contentBox = h('div', { class: 'hl content' });
   const hoverLabel = h('div', { class: 'tag-label' });
   const selBox = h('div', { class: 'hl sel' });
   const matchLayer = h('div');
   const panel = h('div', { class: 'panel', hidden: true });
   const list = h('div', { class: 'list', hidden: true });
   const bar = h('div', { class: 'bar' });
-  ui.append(matchLayer, marginBox, padBox, selBox, hoverLabel, panel, list, bar);
+  ui.append(matchLayer, marginBox, padBox, contentBox, selBox, hoverLabel, panel, list, bar);
 
   const isOurs = (e) => e.composedPath().includes(host);
 
@@ -660,7 +664,7 @@
   function drawHover() {
     const el = S.inspecting ? S.hover : null;
     if (!el || el === S.sel || !el.isConnected) {
-      marginBox.style.display = padBox.style.display = hoverLabel.style.display = 'none';
+      marginBox.style.display = padBox.style.display = contentBox.style.display = hoverLabel.style.display = 'none';
       return;
     }
     const r = el.getBoundingClientRect();
@@ -669,10 +673,11 @@
     const b = sides(c, 'border$Width');
     const p = sides(c, 'padding$');
     place(marginBox, { left: r.left - m[3], top: r.top - m[0], width: r.width + m[1] + m[3], height: r.height + m[0] + m[2] });
-    marginBox.style.borderWidth = m.map((v) => v + 'px').join(' ');
-    place(padBox, { left: r.left + b[3], top: r.top + b[0], width: Math.max(0, r.width - b[1] - b[3]), height: Math.max(0, r.height - b[0] - b[2]) });
-    padBox.style.borderWidth = p.map((v) => Math.max(0, v) + 'px').join(' ');
+    marginBox.style.borderRadius = m.some((v) => v > 0) ? '0' : c.borderRadius;
+    place(padBox, r);
     padBox.style.borderRadius = c.borderRadius; // follow rounded corners (cards, pills)
+    const pp = p.map((v) => Math.max(0, v));
+    place(contentBox, { left: r.left + b[3] + pp[3], top: r.top + b[0] + pp[0], width: Math.max(0, r.width - b[1] - b[3] - pp[1] - pp[3]), height: Math.max(0, r.height - b[0] - b[2] - pp[0] - pp[2]) });
     const hasText = ownsText(el);
     hoverLabel.innerHTML = '';
     hoverLabel.append(
@@ -1478,11 +1483,48 @@
   // Collapsed = inactive: no inspecting, no selection, no list. Expanding activates Caliper and
   // goes straight into Inspect. Saved/sent previews keep applying either way.
   function setCollapsed(on) {
-    S.barCollapsed = on;
-    S.listOpen = false;
-    if (on && S.sel) deselect();
-    renderList();
-    setInspect(!on);
+    animateBar(() => {
+      S.barCollapsed = on;
+      S.listOpen = false;
+      if (on && S.sel) deselect();
+      renderList();
+      setInspect(!on);
+    });
+  }
+
+  // Morph between the chip and the full bar: the size and position glide while the old
+  // contents fade out and the new ones fade in.
+  let barAnim = null;
+  function animateBar(change) {
+    const from = bar.getBoundingClientRect();
+    const oldNodes = [...bar.childNodes];
+    const wasCollapsed = bar.classList.contains('collapsed');
+    change();
+    const isCollapsed = bar.classList.contains('collapsed');
+    const to = bar.getBoundingClientRect();
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches || (from.width === to.width && from.left === to.left)) return;
+    const newNodes = [...bar.childNodes];
+    if (barAnim) barAnim.cancel();
+    bar.replaceChildren(...oldNodes);
+    bar.classList.toggle('collapsed', wasCollapsed); // old contents keep their own styling until the swap
+    bar.classList.add('morphing');
+    const fadeOut = 110;
+    barAnim = bar.animate(
+      [{ width: from.width + 'px', left: from.left + 'px', top: from.top + 'px' }, { width: to.width + 'px', left: to.left + 'px', top: to.top + 'px' }],
+      { duration: 340, easing: 'cubic-bezier(.32,.72,0,1)' },
+    );
+    oldNodes.forEach((n) => n.animate && n.animate([{ opacity: 1 }, { opacity: 0 }], { duration: fadeOut, fill: 'forwards' }));
+    const anim = barAnim;
+    setTimeout(() => {
+      if (barAnim !== anim || !oldNodes.every((n) => n.parentNode === bar)) return; // re-rendered meanwhile
+      bar.replaceChildren(...newNodes);
+      bar.classList.toggle('collapsed', isCollapsed);
+      newNodes.forEach((n) => n.animate && n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' }));
+    }, fadeOut);
+    anim.onfinish = anim.oncancel = () => {
+      if (barAnim === anim) barAnim = null;
+      bar.classList.remove('morphing');
+    };
   }
 
   // Toolbar position: null = bottom centre; otherwise its top-left, kept inside the viewport.
