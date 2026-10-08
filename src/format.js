@@ -14,13 +14,13 @@ export function formatChange(c) {
       ? `Scope: ALL ${el.matchCount} elements matching \`${el.classSelector}\` — change the shared component/style, not a single instance.`
       : `Scope: this one element (\`${el.selector}\`).`,
   );
-  L.push('', 'Changes (computed value before → value the designer chose):');
-  for (const ch of c.changes || []) {
-    L.push(`- ${ch.property}: ${ch.from} → ${ch.to}${ch.hint ? `   [Tailwind: ${ch.hint}]` : ''}`);
-  }
+  if (c.changes && c.changes.length) {
+    L.push('', 'Changes (computed value before → value the designer chose):');
+    for (const ch of c.changes) L.push(`- ${ch.property}: ${ch.from} → ${ch.to}${ch.hint ? `   [Tailwind: ${ch.hint}]` : ''}`);
+  } else L.push('', 'No values tuned: the designer note below is the whole request.');
   if (c.tailwind) L.push('', `Suggested Tailwind (replace the matching classes): ${c.tailwind}`);
   if (c.note) L.push('', `Designer note: ${c.note}`);
-  L.push('', 'CSS override currently producing the preview:', '```css', c.css || '', '```');
+  if (c.css) L.push('', 'CSS override currently producing the preview:', '```css', c.css, '```');
   return L.join('\n');
 }
 

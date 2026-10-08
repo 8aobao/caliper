@@ -360,6 +360,8 @@
     };
   }
   const hasProps = (e) => Object.keys(e.props).length > 0;
+  // A change worth keeping/sending: tuned values, or just a note ("add a soft shadow").
+  const hasContent = (e) => hasProps(e) || !!(e.note && e.note.trim());
   const editSelector = (e) => (e.scope === 'all' && e.classSelector ? e.classSelector : e.selector);
   const activeHere = (e) => e.scope === 'all' || e.path === location.pathname;
   function findEditFor(el) {
@@ -368,7 +370,7 @@
   }
 
   function persist() {
-    lsSet(STORE_KEY, S.edits.filter((e) => hasProps(e) && (e.saved || e.changeId || e.session === SESSION)));
+    lsSet(STORE_KEY, S.edits.filter((e) => hasContent(e) && (e.saved || e.changeId || e.session === SESSION)));
   }
   function restore() {
     // Saved and sent previews survive reloads; unsaved drafts only within this tab's session.
@@ -417,7 +419,7 @@
   function touched(e) {
     e.dirty = true;
     if (e.agent === 'pending' || e.agent === 'acknowledged' || e.agent === 'dismissed') e.agent = 'modified';
-    if (!hasProps(e) && !e.changeId) S.edits = S.edits.filter((x) => x !== e);
+    if (!hasContent(e) && !e.changeId) S.edits = S.edits.filter((x) => x !== e);
     persist();
     syncAll();
     renderBar();
@@ -1203,9 +1205,13 @@
     dragHandle(head);
 
     const body = h('div', { class: 'body' }, sectionsFor(el));
-    const note = h('textarea', { class: 'note', placeholder: 'Note for the agent (optional) — e.g. “apply to all CTAs”', spellcheck: false });
+    const note = h('textarea', { class: 'note', placeholder: 'What else should change?', spellcheck: false });
     note.value = e.note || '';
-    note.addEventListener('input', () => { e.note = note.value; if (hasProps(e)) persist(); });
+    note.addEventListener('input', () => {
+      e.note = note.value;
+      if (hasContent(e) && !S.edits.includes(e)) S.edits.push(e);
+      touched(e);
+    });
     note.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter' && (ev.metaKey || ev.ctrlKey)) send([e]); });
     statusEl = h('div', { class: 'status' });
     footBtns = {
@@ -1244,8 +1250,10 @@
     else if (e.agent === 'modified') (msg = 'Edited since sending — send again to update'), (cls = 'warn');
     statusEl.textContent = msg;
     statusEl.className = 'status ' + cls;
-    footBtns.reset.disabled = footBtns.copy.disabled = footBtns.save.disabled = !n;
-    footBtns.send.disabled = !n || !S.online || e.agent === 'pending' || e.agent === 'acknowledged';
+    const any = hasContent(e);
+    footBtns.reset.disabled = !n;
+    footBtns.copy.disabled = footBtns.save.disabled = !any;
+    footBtns.send.disabled = !any || !S.online || e.agent === 'pending' || e.agent === 'acknowledged';
     footBtns.send.title = S.online ? 'Send to the agent (⌘↵)' : `Caliper server offline (${ENDPOINT}) — use Copy`;
     footBtns.save.textContent = e.saved && !e.dirty ? 'Saved' : 'Save';
   }
@@ -1360,7 +1368,7 @@
   }
 
   async function copy(edits) {
-    const text = edits.filter(hasProps).map((e) => formatChange(payload(e))).join('\n\n---\n\n');
+    const text = edits.filter(hasContent).map((e) => formatChange(payload(e))).join('\n\n---\n\n');
     try {
       await navigator.clipboard.writeText(text + '\n\n' + AGENT_GUIDE);
       toast('Copied — paste it to any agent');
@@ -1370,7 +1378,7 @@
   }
 
   async function send(edits) {
-    edits = edits.filter((e) => hasProps(e) && e.agent !== 'pending' && e.agent !== 'acknowledged');
+    edits = edits.filter((e) => hasContent(e) && e.agent !== 'pending' && e.agent !== 'acknowledged');
     if (!edits.length) return;
     if (!S.online) return toast(`Caliper server offline — start it with: caliper server`);
     let ok = 0;
@@ -1468,7 +1476,7 @@
   // opening/closing never redraws it: only its blue fill fades while the bar grows or shrinks.
   let mainBtn = null;
   function renderBar() {
-    const here = S.edits.filter(hasProps);
+    const here = S.edits.filter(hasContent);
     const unsent = here.filter((e) => !e.agent || e.agent === 'modified' || e.agent === 'dismissed');
     if (!mainBtn) mainBtn = h('button', { 'data-tip': '⌥C' }, icon('target'));
     mainBtn.className = 'bb main' + (S.barCollapsed ? '' : ' on');
@@ -1662,7 +1670,7 @@
     list.hidden = !S.listOpen;
     if (!S.listOpen) return;
     requestAnimationFrame(placeList);
-    const all = S.edits.filter(hasProps);
+    const all = S.edits.filter(hasContent);
     list.innerHTML = '';
     list.append(
       h('div', { class: 'lh' }, `Changes (${all.length})`, h('span', { style: 'display:flex;gap:4px' },
@@ -1677,7 +1685,7 @@
               chk,
               h('div', { class: 'main', onclick: () => jumpTo(e) },
                 h('div', { class: 'nm' }, e.label),
-                h('div', { class: 'sub' }, `${n} prop${n > 1 ? 's' : ''} · ${Object.keys(e.props).slice(0, 3).join(', ')}${n > 3 ? '…' : ''}${e.scope === 'all' ? ' · all matching' : ''}${activeHere(e) ? '' : ' · ' + e.path}`)),
+                h('div', { class: 'sub' }, `${n ? `${n} prop${n > 1 ? 's' : ''} · ${Object.keys(e.props).slice(0, 3).join(', ')}${n > 3 ? '…' : ''}` : `note: ${e.note.trim().slice(0, 40)}`}${e.scope === 'all' ? ' · all matching' : ''}${activeHere(e) ? '' : ' · ' + e.path}`)),
               pill(e),
               h('button', { class: 'ib', title: 'Remove (drop the preview)', onclick: () => removeEdit(e) }, icon('trash')));
           }))
