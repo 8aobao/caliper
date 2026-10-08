@@ -571,6 +571,7 @@
   .note:focus { border-color: #4f8cff; background: #1c1c1c; }
   .note::placeholder { color: #707070; }
   .status { color: #8a8a8a; font-size: 10.5px; min-height: 13px; }
+  .status:empty { display: none; }
   .status.agent { color: #6f9bff; } .status.warn { color: #ffb02e; }
   .acts { display: flex; gap: 6px; }
   .btn { height: 30px; padding: 0 10px; border-radius: 8px; background: #2a2a2a; color: #ddd; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -1235,7 +1236,7 @@
     const e = S.edit;
     if (!e || !statusEl) return;
     const n = Object.keys(e.props).length;
-    let msg = n ? `${n} change${n > 1 ? 's' : ''} · live preview` : 'Drag a value to tune it. Click a value to type.';
+    let msg = n ? `${n} change${n > 1 ? 's' : ''} · live preview` : '';
     let cls = '';
     if (e.agent === 'pending') (msg = 'Sent · waiting for the agent'), (cls = 'agent');
     else if (e.agent === 'acknowledged') (msg = 'Agent is applying this…'), (cls = 'agent');
