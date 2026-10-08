@@ -435,10 +435,12 @@
   input, textarea { font: inherit; color: inherit; }
 
   .hl { position: fixed; pointer-events: none; display: none; }
-  /* Hover: three stacked layers of one faint blue (margin box, border box, content box), so the
-     margin reads lightest, padding stronger and content strongest purely from the overlap. */
-  .hl.margin, .hl.pad, .hl.content { background: rgba(79,140,255,.11); }
-  .hl.pad { outline: 1px solid rgba(79,140,255,.65); }
+  /* Hover: one very faint blue. Margin and the element's frame (border + padding) get the full
+     tint; a leaf (text, image) is filled with it too, while a container's inside gets about
+     half, so its children read lighter than its padding. */
+  .hl.margin { background: rgba(79,140,255,.055); }
+  .hl.pad { border-style: solid; border-color: rgba(79,140,255,.055); background: rgba(79,140,255,.028); background-clip: padding-box; outline: 1px solid rgba(79,140,255,.45); }
+  .hl.pad.leaf { background-color: rgba(79,140,255,.055); }
   .hl.sel { outline: 1.5px solid #4f8cff; outline-offset: 0; box-shadow: 0 0 0 4px rgba(79,140,255,.15); }
   .hl.match { outline: 1px dashed rgba(79,140,255,.85); }
   .tag-label { position: fixed; pointer-events: none; display: none; white-space: nowrap; background: #4f8cff; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 10.5px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
@@ -594,14 +596,13 @@
 
   const marginBox = h('div', { class: 'hl margin' });
   const padBox = h('div', { class: 'hl pad' });
-  const contentBox = h('div', { class: 'hl content' });
   const hoverLabel = h('div', { class: 'tag-label' });
   const selBox = h('div', { class: 'hl sel' });
   const matchLayer = h('div');
   const panel = h('div', { class: 'panel', hidden: true });
   const list = h('div', { class: 'list', hidden: true });
   const bar = h('div', { class: 'bar' });
-  ui.append(matchLayer, marginBox, padBox, contentBox, selBox, hoverLabel, panel, list, bar);
+  ui.append(matchLayer, marginBox, padBox, selBox, hoverLabel, panel, list, bar);
 
   const isOurs = (e) => e.composedPath().includes(host);
 
@@ -664,7 +665,7 @@
   function drawHover() {
     const el = S.inspecting ? S.hover : null;
     if (!el || el === S.sel || !el.isConnected) {
-      marginBox.style.display = padBox.style.display = contentBox.style.display = hoverLabel.style.display = 'none';
+      marginBox.style.display = padBox.style.display = hoverLabel.style.display = 'none';
       return;
     }
     const r = el.getBoundingClientRect();
@@ -673,11 +674,12 @@
     const b = sides(c, 'border$Width');
     const p = sides(c, 'padding$');
     place(marginBox, { left: r.left - m[3], top: r.top - m[0], width: r.width + m[1] + m[3], height: r.height + m[0] + m[2] });
-    marginBox.style.borderRadius = m.some((v) => v > 0) ? '0' : c.borderRadius;
+    // No margin: the margin layer would just sit under the frame, so hide it.
+    marginBox.style.display = m.some((v) => v > 0) ? 'block' : 'none';
     place(padBox, r);
     padBox.style.borderRadius = c.borderRadius; // follow rounded corners (cards, pills)
-    const pp = p.map((v) => Math.max(0, v));
-    place(contentBox, { left: r.left + b[3] + pp[3], top: r.top + b[0] + pp[0], width: Math.max(0, r.width - b[1] - b[3] - pp[1] - pp[3]), height: Math.max(0, r.height - b[0] - b[2] - pp[0] - pp[2]) });
+    padBox.style.borderWidth = b.map((v, i) => Math.max(0, v + p[i]) + 'px').join(' ');
+    padBox.classList.toggle('leaf', !el.firstElementChild || ownsText(el));
     const hasText = ownsText(el);
     hoverLabel.innerHTML = '';
     hoverLabel.append(
