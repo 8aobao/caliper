@@ -69,6 +69,8 @@
     x: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
     reset: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8a5 5 0 1 0 1.5-3.5M3 2.5V5h2.5"/></svg>',
     expand: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2"/><path d="M8 2.5v11M2.5 8h11"/></svg>',
+    grip: '<svg viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="6" cy="2" r="1.1"/><circle cx="2" cy="7" r="1.1"/><circle cx="6" cy="7" r="1.1"/><circle cx="2" cy="12" r="1.1"/><circle cx="6" cy="12" r="1.1"/></svg>',
+    collapse: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3.5L5.5 8l4.5 4.5"/></svg>',
     trash: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5"/></svg>',
   };
   const icon = (name) => h('span', { class: 'ic', html: ICON[name] });
@@ -306,6 +308,7 @@
     online: false,
     listOpen: false,
     collapsed: new Set(lsGet(UI_KEY, {}).collapsed || []),
+    barCollapsed: !!lsGet(UI_KEY, {}).barCollapsed,
     expanded: new Set(),
     colorOpen: null,
     matches: [],
@@ -422,8 +425,15 @@
   .tag-label { position: fixed; pointer-events: none; display: none; white-space: nowrap; background: #4f8cff; color: #fff; padding: 3px 6px; border-radius: 4px; font-size: 10.5px; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
   .tag-label b { font-weight: 650; } .tag-label i { font-style: normal; opacity: .75; }
 
-  .bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 2px; padding: 4px; background: rgba(20,20,20,.94); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.6); }
-  .bb { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border-radius: 8px; color: #bdbdbd; }
+  .bar { position: fixed; display: flex; touch-action: none; user-select: none; cursor: grab; align-items: center; gap: 2px; padding: 4px; background: rgba(20,20,20,.94); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.6); }
+  .bar.dragging { cursor: grabbing; box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 .5px rgba(0,0,0,.6); }
+  .bar.dragging * { cursor: grabbing !important; }
+  .grip { display: inline-flex; width: 14px; height: 30px; align-items: center; justify-content: center; color: #5a5a5a; margin: 0 1px 0 2px; }
+  .bar:hover .grip { color: #8a8a8a; }
+  .bar.collapsed { padding: 4px; border-radius: 12px; }
+  .bar.collapsed .bb { padding: 0 8px; }
+  .badge { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: #ffb02e; color: #111; font-size: 10px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
+  .bb { cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border-radius: 8px; color: #bdbdbd; }
   .bb:hover { background: rgba(255,255,255,.07); color: #fff; }
   .bb.on { background: #4f8cff; color: #fff; }
   .bb.primary { background: #fff; color: #111; } .bb.primary:hover { background: #e6e6e6; }
@@ -512,7 +522,7 @@
   .btn.primary { flex: 1; background: #fff; color: #111; font-weight: 600; } .btn.primary:hover { background: #e6e6e6; }
   .btn[disabled] { opacity: .35; pointer-events: none; }
 
-  .list { position: fixed; left: 50%; bottom: 62px; transform: translateX(-50%); width: 340px; max-height: 50vh; display: flex; flex-direction: column; background: rgba(20,20,20,.96); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; box-shadow: 0 16px 50px rgba(0,0,0,.45); overflow: hidden; }
+  .list { position: fixed; width: 340px; max-height: 50vh; display: flex; flex-direction: column; background: rgba(20,20,20,.96); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.08); border-radius: 14px; box-shadow: 0 16px 50px rgba(0,0,0,.45); overflow: hidden; }
   .list .lh { padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,.06); color: #fff; font-weight: 600; }
   .list .items { overflow: auto; padding: 4px; }
   .item { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; }
@@ -550,6 +560,9 @@
 
   function toast(msg, ms = 2400) {
     const t = h('div', { class: 'toast' }, msg);
+    // Opposite edge from the toolbar, so it never covers it.
+    const r = bar.getBoundingClientRect();
+    if (r.top < innerHeight / 2) Object.assign(t.style, { top: 'auto', bottom: '16px' });
     ui.append(t);
     setTimeout(() => t.classList.add('out'), ms);
     setTimeout(() => t.remove(), ms + 400);
@@ -1194,16 +1207,118 @@
     const here = S.edits.filter(hasProps);
     const unsent = here.filter((e) => !e.agent || e.agent === 'modified' || e.agent === 'dismissed');
     bar.innerHTML = '';
+    bar.classList.toggle('collapsed', S.barCollapsed);
+    if (S.barCollapsed) {
+      bar.append(
+        h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Expand Caliper (drag to move · ⌥C inspects)', onclick: () => setCollapsed(false) },
+          icon('target'), here.length ? h('span', { class: 'badge' }, here.length) : '', h('span', { class: 'net' + (S.online ? ' ok' : ''), style: 'margin:0 0 0 2px' })),
+      );
+      placeBar();
+      syncFoot();
+      return;
+    }
     bar.append(
+      h('span', { class: 'grip', title: 'Drag to move', html: ICON.grip }),
       h('button', { class: 'bb' + (S.inspecting ? ' on' : ''), title: 'Inspect (⌥C)', onclick: () => setInspect(!S.inspecting) }, icon('target'), 'Inspect', h('span', { class: 'kbd' }, '⌥C')),
       h('div', { class: 'sep' }),
       h('button', { class: 'bb' + (S.listOpen ? ' on' : ''), title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list'), h('span', { class: 'count' }, here.length)),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
       h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : 'Caliper server offline', onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
       h('span', { class: 'net' + (S.online ? ' ok' : ''), title: S.online ? `Connected to ${ENDPOINT}` : `Offline — run "caliper server" (${ENDPOINT})` }),
+      h('button', { class: 'ib', title: 'Collapse', onclick: () => setCollapsed(true) }, icon('collapse')),
     );
+    placeBar();
     syncFoot();
   }
+
+  function setCollapsed(on) {
+    S.barCollapsed = on;
+    if (on) S.listOpen = false;
+    lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), barCollapsed: on });
+    renderList();
+    renderBar();
+  }
+
+  // Toolbar position: null = bottom centre; otherwise its top-left, kept inside the viewport.
+  // Collapsing/expanding keeps the bar's anchor edge, so the button you clicked stays put.
+  let barPos = lsGet(UI_KEY, {}).barPos || null;
+  function placeBar() {
+    const w = bar.offsetWidth;
+    const hgt = bar.offsetHeight;
+    let x;
+    let y;
+    if (!barPos) {
+      x = (innerWidth - w) / 2;
+      y = innerHeight - hgt - 16;
+    } else {
+      x = barPos.anchor === 'right' ? barPos.x - w : barPos.x;
+      y = barPos.y;
+    }
+    bar.style.left = clamp(x, 8, Math.max(8, innerWidth - w - 8)) + 'px';
+    bar.style.top = clamp(y, 8, Math.max(8, innerHeight - hgt - 8)) + 'px';
+    placeList();
+  }
+  function placeList() {
+    if (list.hidden) return;
+    const r = bar.getBoundingClientRect();
+    const w = 340;
+    list.style.left = clamp(r.left + r.width / 2 - w / 2, 8, innerWidth - w - 8) + 'px';
+    if (r.top > innerHeight / 2) {
+      list.style.top = '';
+      list.style.bottom = innerHeight - r.top + 8 + 'px';
+    } else {
+      list.style.bottom = '';
+      list.style.top = r.bottom + 8 + 'px';
+    }
+  }
+
+  // Drag from anywhere on the bar (buttons included); past a few px it's a move, not a click.
+  bar.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return;
+    const r = bar.getBoundingClientRect();
+    const ox = ev.clientX - r.left;
+    const oy = ev.clientY - r.top;
+    const sx = ev.clientX;
+    const sy = ev.clientY;
+    let dragging = false;
+    const move = (e2) => {
+      if (!dragging) {
+        if (Math.hypot(e2.clientX - sx, e2.clientY - sy) < 4) return;
+        dragging = true;
+        bar.setPointerCapture(ev.pointerId);
+        bar.classList.add('dragging');
+      }
+      const w = bar.offsetWidth;
+      const x = clamp(e2.clientX - ox, 8, innerWidth - w - 8);
+      const y = clamp(e2.clientY - oy, 8, innerHeight - bar.offsetHeight - 8);
+      // Anchor to the nearer side so collapse/expand grows away from the screen edge.
+      barPos = x + w / 2 > innerWidth / 2 ? { anchor: 'right', x: x + w, y } : { anchor: 'left', x, y };
+      placeBar();
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move, true);
+      window.removeEventListener('pointerup', up, true);
+      window.removeEventListener('pointercancel', up, true);
+      if (!dragging) return;
+      bar.classList.remove('dragging');
+      lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), barPos });
+      // Swallow the click that ends a drag.
+      const swallow = (c) => { c.stopPropagation(); c.preventDefault(); };
+      bar.addEventListener('click', swallow, { capture: true, once: true });
+      setTimeout(() => bar.removeEventListener('click', swallow, { capture: true }), 0);
+    };
+    window.addEventListener('pointermove', move, true);
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+  });
+  bar.addEventListener('dblclick', (ev) => {
+    // Double-click the grip: back to the default spot.
+    if (!ev.target.closest('.grip')) return;
+    barPos = null;
+    lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), barPos });
+    placeBar();
+  });
+  window.addEventListener('resize', () => placeBar());
 
   function pill(e) {
     if (e.agent === 'pending') return h('span', { class: 'pill blue' }, 'sent');
@@ -1217,6 +1332,7 @@
   function renderList() {
     list.hidden = !S.listOpen;
     if (!S.listOpen) return;
+    requestAnimationFrame(placeList);
     const all = S.edits.filter(hasProps);
     list.innerHTML = '';
     list.append(
