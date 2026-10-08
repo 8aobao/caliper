@@ -75,6 +75,24 @@
   };
   const icon = (name) => h('span', { class: 'ic', html: ICON[name] });
 
+  // Figma-style side glyphs for box values: a faint box with a bold line on the edge being set
+  // (inside the box for padding, outside it for margin), or the corner arc for radius.
+  const SIDE_LINES = {
+    pad: { t: 'M4.5 3.5h3', r: 'M8.5 4.5v3', b: 'M4.5 8.5h3', l: 'M3.5 4.5v3' },
+    mar: { t: 'M4.5 1h3', r: 'M11 4.5v3', b: 'M4.5 11h3', l: 'M1 4.5v3' },
+  };
+  function sideIcon(kind, sides) {
+    const frame = kind === 'mar' ? '<rect x="3" y="3" width="6" height="6" rx="1.2" opacity=".4"/>' : '<rect x="1" y="1" width="10" height="10" rx="2" opacity=".4"/>';
+    let marks;
+    if (kind === 'rad') {
+      const C = { tl: 'M1.5 6V4.5a3 3 0 0 1 3-3H6', tr: 'M6 1.5h1.5a3 3 0 0 1 3 3V6', br: 'M10.5 6v1.5a3 3 0 0 1-3 3H6', bl: 'M6 10.5H4.5a3 3 0 0 1-3-3V6' };
+      marks = sides.map((c) => `<path d="${C[c]}" stroke-width="1.5"/>`).join('');
+      return h('span', { class: 'side-ic', html: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round">${sides.length === 4 ? '' : '<rect x="1.5" y="1.5" width="9" height="9" rx="3" opacity=".4"/>'}${marks}</svg>` });
+    }
+    marks = sides.map((sd) => `<path d="${SIDE_LINES[kind][sd]}" stroke-width="1.5"/>`).join('');
+    return h('span', { class: 'side-ic', html: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round">${frame}${marks}</svg>` });
+  }
+
   // ---------------------------------------------------------------- colors
   const cvs = document.createElement('canvas');
   cvs.width = cvs.height = 1;
@@ -311,6 +329,7 @@
     barCollapsed: !!lsGet(UI_KEY, {}).barCollapsed,
     expanded: new Set(),
     colorOpen: null,
+    hslOpen: false,
     matches: [],
   };
 
@@ -493,6 +512,8 @@
   .changed > .dot, .changed > .rl > .dot { display: inline-block; }
   .dot:hover { box-shadow: 0 0 0 3px rgba(255,176,46,.3); }
   .mini { padding: 0 6px; gap: 4px; } .mini .lbl { color: #777; font-size: 10px; }
+  .side-ic { display: inline-flex; width: 12px; height: 12px; color: #9a9a9a; vertical-align: -2px; } .side-ic svg { width: 100%; height: 100%; }
+  .scrub:hover .side-ic, .scrub.drag .side-ic, .scrub:focus-visible .side-ic { color: #fff; }
 
   .grid2, .grid4 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
   .quad .qh { display: flex; align-items: center; justify-content: space-between; height: 20px; color: #a8a8a8; padding: 0 2px 0 4px; }
@@ -511,12 +532,25 @@
   .sw i { position: absolute; inset: 0; }
   .native { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
   .ctl .tok { color: #6f9bff; font-size: 10.5px; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
-  .pop { background: #111; border-radius: 8px; padding: 8px; display: grid; gap: 8px; }
-  .pop .sws { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-height: 120px; overflow: auto; }
+  .pop { background: #111; border-radius: 8px; padding: 8px; display: grid; gap: 8px; margin: 6px 0 4px; }
+  .pop-h { color: #8a8a8a; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: -3px; }
+  .pop .sws { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; max-height: 120px; overflow: auto; padding: 2px; }
   .pop .sws button { aspect-ratio: 1; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
   .pop .sws button:hover { box-shadow: 0 0 0 1.5px #fff; }
-  .pop .pick { height: 24px; border-radius: 6px; background: #262626; color: #ccc; }
-  .pop .pick:hover { background: #333; color: #fff; }
+  .pop .sws button.on { box-shadow: 0 0 0 1.5px #111, 0 0 0 3px #4f8cff; }
+  .pop .pick { height: 26px; border-radius: 6px; background: #262626; color: #ccc; }
+  .pop .pick:hover, .pop .pick.on { background: #333; color: #fff; }
+  .hsl { display: grid; gap: 8px; }
+  .hsl .thumb { position: absolute; width: 12px; height: 12px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.5); transform: translate(-50%, -50%); pointer-events: none; }
+  .hsl-plane { position: relative; height: 128px; border-radius: 6px; cursor: crosshair; touch-action: none;
+    background: linear-gradient(to bottom, #fff 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0) 50%, #000 100%), linear-gradient(to right, hsl(var(--h) 0% 50%), hsl(var(--h) 100% 50%)); }
+  .hsl-track { position: relative; height: 12px; border-radius: 99px; cursor: ew-resize; touch-action: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+  .hsl-track .thumb { top: 50%; }
+  .hsl-track.hue { background: linear-gradient(to right, hsl(0 100% 50%), hsl(60 100% 50%), hsl(120 100% 50%), hsl(180 100% 50%), hsl(240 100% 50%), hsl(300 100% 50%), hsl(360 100% 50%)); }
+  .hsl-track.alpha { background-image: linear-gradient(45deg,#444 25%,transparent 25%,transparent 75%,#444 75%),linear-gradient(45deg,#444 25%,transparent 25%,transparent 75%,#444 75%); background-color: #777; background-size: 8px 8px; background-position: 0 0, 4px 4px; }
+  .hsl-track.alpha i { position: absolute; inset: 0; border-radius: inherit; }
+  .hsl-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .hsl-fields .scrub { background: #222; }
   .muted { color: #777; font-size: 10.5px; }
 
   .foot { border-top: 1px solid rgba(255,255,255,.06); padding: 8px 10px 10px; display: grid; gap: 8px; }
@@ -694,7 +728,7 @@
     const val = h('span', { class: 'val' });
     const tok = h('span', { class: 'tok' });
     const dot = h('span', { class: 'dot', title: 'Reset' });
-    const box = h('div', { class: 'scrub' + (mini ? ' mini' : ''), tabindex: 0, 'data-param': '', title: spec.props.join(', ') }, fill, dot, h('span', { class: 'lbl' }, spec.label), tok, val);
+    const box = h('div', { class: 'scrub' + (mini ? ' mini' : ''), tabindex: 0, 'data-param': '', title: spec.title || spec.props.join(', ') }, fill, dot, h('span', { class: 'lbl' }, spec.label), tok, val);
     let cur = null;
     let busy = false;
     const show = (v) => {
@@ -816,12 +850,14 @@
     const wrap = h('div', { class: 'quad' });
     const dot = h('span', { class: 'dot', title: 'Reset', onclick: () => resetProps(props) });
     const head = h('div', { class: 'qh' }, h('span', { class: 'rl' }, dot, label), h('button', { class: 'ib', title: 'Individual sides', onclick: () => { S.expanded.has(key) ? S.expanded.delete(key) : S.expanded.add(key); renderPanel(); } }, icon('expand')));
-    const mk = (lbl, ps) =>
-      scrubber({ label: lbl, props: ps, get: readPx(ps[0]), set: (v) => ps.forEach((p) => setProp(p, typeof v === 'number' ? v + 'px' : v)), unit: 'px', step: 1, min: 0, max: 64, hardMin: o.allowNegative ? undefined : 0, ...o }, true);
+    const kind = o.corners ? 'rad' : props[0].startsWith('margin') ? 'mar' : 'pad';
+    const NAMES = { t: 'top', r: 'right', b: 'bottom', l: 'left', tl: 'top left', tr: 'top right', br: 'bottom right', bl: 'bottom left' };
+    const mk = (sides, ps) =>
+      scrubber({ label: sideIcon(kind, sides), title: `${props[0].split('-')[0] === 'border' ? 'Radius' : label} ${sides.length === 4 ? 'all corners' : sides.map((x) => NAMES[x]).join(' + ')}`, props: ps, get: readPx(ps[0]), set: (v) => ps.forEach((p) => setProp(p, typeof v === 'number' ? v + 'px' : v)), unit: 'px', step: 1, min: 0, max: 64, hardMin: o.allowNegative ? undefined : 0, ...o }, true);
     let grid;
-    if (S.expanded.has(key)) grid = h('div', { class: 'grid4' }, o.corners ? [mk('TL', [props[0]]), mk('TR', [props[1]]), mk('BL', [props[3]]), mk('BR', [props[2]])] : [mk('T', [props[0]]), mk('R', [props[1]]), mk('B', [props[2]]), mk('L', [props[3]])]);
-    else if (o.corners) grid = h('div', {}, mk('All', props));
-    else grid = h('div', { class: 'grid2' }, mk('X', [props[1], props[3]]), mk('Y', [props[0], props[2]]));
+    if (S.expanded.has(key)) grid = h('div', { class: 'grid4' }, o.corners ? [mk(['tl'], [props[0]]), mk(['tr'], [props[1]]), mk(['bl'], [props[3]]), mk(['br'], [props[2]])] : [mk(['l'], [props[3]]), mk(['t'], [props[0]]), mk(['r'], [props[1]]), mk(['b'], [props[2]])]);
+    else if (o.corners) grid = h('div', {}, mk(['tl', 'tr', 'br', 'bl'], props));
+    else grid = h('div', { class: 'grid2' }, mk(['l', 'r'], [props[1], props[3]]), mk(['t', 'b'], [props[0], props[2]]));
     wrap.append(head, grid);
     controls.push({ sync: () => head.classList.toggle('changed', isChanged(props)) });
     return wrap;
@@ -859,25 +895,152 @@
     return row(label, [prop], inp);
   }
 
+  // Colors in use on the page, most used first. Matching tokens are kept so a pick can write
+  // var(--token) instead of a raw value.
+  function pageColors() {
+    const counts = new Map();
+    const add = (v) => {
+      const hx = toHex(v);
+      if (!hx || hx === 'transparent') return;
+      counts.set(hx, (counts.get(hx) || 0) + 1);
+    };
+    const els = [document.documentElement, document.body, ...document.body.getElementsByTagName('*')];
+    for (let i = 0; i < els.length && i < 4000; i++) {
+      const el = els[i];
+      if (el === host || el.localName === 'caliper-probe' || !el.getClientRects().length) continue;
+      const c = cs(el);
+      if (c.visibility === 'hidden' || c.opacity === '0') continue;
+      if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) add(c.color);
+      add(c.backgroundColor);
+      if (px(c.borderTopWidth) > 0) add(c.borderTopColor);
+      if (el instanceof SVGElement) {
+        if (c.fill && c.fill !== 'none' && !c.fill.startsWith('url')) add(c.fill);
+        if (c.stroke && c.stroke !== 'none' && !c.stroke.startsWith('url')) add(c.stroke);
+      }
+    }
+    return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 40).map(([hex, n]) => ({ hex, n, token: T.colorByHex.get(hex) || null }));
+  }
+
+  const hexToRgba = (hx) => {
+    const m = hx.replace('#', '');
+    return [0, 2, 4].map((i) => parseInt(m.slice(i, i + 2), 16)).concat(m.length === 8 ? parseInt(m.slice(6, 8), 16) / 255 : 1);
+  };
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let hue = 0;
+    let sat = 0;
+    if (max !== min) {
+      const d = max - min;
+      sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      hue = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      hue *= 60;
+    }
+    return [hue, sat * 100, l * 100];
+  }
+  const hslStr = (c) => `hsl(${Math.round(c.h)} ${Math.round(c.s)}% ${Math.round(c.l)}%${c.a < 1 ? ` / ${round(c.a, 2)}` : ''})`;
+
+  // Pointer drag on a track/plane, reporting the position as 0..1 fractions.
+  function dragArea(el, onPos) {
+    el.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      ev.preventDefault();
+      el.setPointerCapture(ev.pointerId);
+      const at = (e) => {
+        const r = el.getBoundingClientRect();
+        onPos(clamp((e.clientX - r.left) / r.width, 0, 1), clamp((e.clientY - r.top) / r.height, 0, 1));
+      };
+      at(ev);
+      const up = () => {
+        el.removeEventListener('pointermove', at);
+        el.removeEventListener('pointerup', up);
+        el.removeEventListener('pointercancel', up);
+      };
+      el.addEventListener('pointermove', at);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+    });
+  }
+
+  // HSL picker: saturation × lightness plane for the current hue, hue and alpha tracks, and
+  // H / S / L / A values (drag, type, Tab). Keeps its own h/s/l so hue survives at grey or black.
+  function hslPicker(prop, startHex) {
+    const [r0, g0, b0, a0] = hexToRgba(startHex && startHex !== 'transparent' ? startHex : '#000000');
+    const [h0, s0, l0] = rgbToHsl(r0, g0, b0);
+    const c = { h: h0, s: s0, l: l0, a: startHex === 'transparent' ? 0 : a0 };
+    let lastOut = null;
+    const plane = h('div', { class: 'hsl-plane' }, h('div', { class: 'thumb' }));
+    const hue = h('div', { class: 'hsl-track hue' }, h('div', { class: 'thumb' }));
+    const alpha = h('div', { class: 'hsl-track alpha' }, h('i'), h('div', { class: 'thumb' }));
+    const paint = () => {
+      plane.style.setProperty('--h', c.h);
+      plane.lastChild.style.left = c.s + '%';
+      plane.lastChild.style.top = 100 - c.l + '%';
+      plane.lastChild.style.background = `hsl(${c.h} ${c.s}% ${c.l}%)`;
+      hue.lastChild.style.left = (c.h / 360) * 100 + '%';
+      alpha.firstChild.style.background = `linear-gradient(to right, hsl(${c.h} ${c.s}% ${c.l}% / 0), hsl(${c.h} ${c.s}% ${c.l}%))`;
+      alpha.lastChild.style.left = c.a * 100 + '%';
+    };
+    const apply = () => {
+      paint();
+      lastOut = hslStr(c);
+      setProp(prop, lastOut);
+    };
+    dragArea(plane, (x, y) => { c.s = x * 100; c.l = (1 - y) * 100; apply(); });
+    dragArea(hue, (x) => { c.h = x * 360; apply(); });
+    dragArea(alpha, (x) => { c.a = round(x, 2); apply(); });
+    const field = (label, key, max, unit, dec = 0) =>
+      scrubber({ label, props: [], get: () => (key === 'a' ? c.a * 100 : c[key]), set: (v) => { const n = Number(v); if (!Number.isFinite(n)) return; c[key] = key === 'a' ? n / 100 : n; apply(); }, step: 1, dec, min: 0, max, hardMin: 0, hardMax: max, unit, perPx: 1 }, true);
+    const fields = h('div', { class: 'hsl-fields' }, field('H', 'h', 360, '°'), field('S', 's', 100, '%'), field('L', 'l', 100, '%'), field('A', 'a', 100, '%'));
+    paint();
+    // Typed hex / token picks elsewhere move the picker too (unless the change came from it).
+    controls.push({
+      sync: () => {
+        const to = S.edit.props[prop] && S.edit.props[prop].to;
+        if (to && to === lastOut) return;
+        const hx = toHex(cs(S.sel).getPropertyValue(prop));
+        if (!hx || hx === 'transparent') return;
+        const [r, g, b, a] = hexToRgba(hx);
+        const [hh, ss, ll] = rgbToHsl(r, g, b);
+        if (ss > 0.5) c.h = hh;
+        Object.assign(c, { s: ss, l: ll, a });
+        paint();
+      },
+    });
+    return h('div', { class: 'hsl' }, plane, hue, alpha, fields);
+  }
+
   function color(label, prop) {
-    const sw = h('button', { class: 'sw', title: 'Tokens & picker' }, h('i'));
+    const sw = h('button', { class: 'sw', title: 'Colors on this page' }, h('i'));
     const hex = h('input', { class: 'txt', spellcheck: false, 'data-param': '' });
     const tok = h('span', { class: 'tok' });
-    const native = h('input', { type: 'color', class: 'native' });
-    const r = row(label, [prop], [sw, hex, tok, native]);
-    const pop = h('div', { class: 'pop', hidden: S.colorOpen !== prop });
-    const wrap = h('div', {}, r, pop);
+    const r = row(label, [prop], [sw, hex, tok]);
+    const open = S.colorOpen === prop;
+    const pop = h('div', { class: 'pop', hidden: !open });
+    const wrap = h('div', { class: 'color-wrap' }, r, pop);
     const setVal = (v) => setProp(prop, v);
-    if (S.colorOpen === prop) {
+    const curHex = () => toHex(cs(S.sel).getPropertyValue(prop));
+    if (open) {
+      const now = curHex();
+      const used = pageColors();
+      const usedHex = new Set(used.map((u) => u.hex));
+      const extraTokens = T.colors.filter((t) => !usedHex.has(t.hex));
+      const swatch = (hx, title, value) =>
+        h('button', { class: hx === now ? 'on' : '', title, style: `background:${hx}`, onclick: () => setVal(value) });
       pop.append(
-        T.colors.length
-          ? h('div', { class: 'sws' }, T.colors.map((t) => h('button', { title: t.name, style: `background:var(${t.name})`, onclick: () => setVal(`var(${t.name})`) })))
-          : h('div', { class: 'muted' }, 'No color tokens found on :root'),
-        h('button', { class: 'pick', onclick: () => { try { native.showPicker(); } catch { native.click(); } } }, 'Custom color…'),
+        h('div', { class: 'pop-h' }, 'On this page'),
+        used.length
+          ? h('div', { class: 'sws' }, used.map((u) => swatch(u.hex, `${u.token ? tokName(u.token).replace(/^--/, '') + ' · ' : ''}${u.hex} · used ${u.n}×`, u.token ? `var(${u.token})` : u.hex)))
+          : h('div', { class: 'muted' }, 'No colors found'),
+        extraTokens.length > 0 && h('div', { class: 'pop-h' }, 'Other tokens'),
+        extraTokens.length > 0 && h('div', { class: 'sws' }, extraTokens.map((t) => swatch(t.hex, `${tokName(t.name).replace(/^--/, '')} · ${t.hex}`, `var(${t.name})`))),
+        h('button', { class: 'pick' + (S.hslOpen ? ' on' : ''), onclick: () => { S.hslOpen = !S.hslOpen; if (S.hslOpen) scrollTo = '.hsl'; renderPanel(); } }, 'Custom color', h('span', { class: 'muted' }, ' · HSL')),
+        S.hslOpen && hslPicker(prop, now),
       );
     }
-    sw.addEventListener('click', () => { S.colorOpen = S.colorOpen === prop ? null : prop; renderPanel(); });
-    native.addEventListener('input', () => setVal(native.value));
+    sw.addEventListener('click', () => { S.colorOpen = open ? null : prop; if (!open) scrollTo = '.pop:not([hidden])'; renderPanel(); });
     hex.addEventListener('change', () => setVal(/^[0-9a-f]{3,8}$/i.test(hex.value.trim()) ? '#' + hex.value.trim() : hex.value));
     hex.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') hex.blur(); });
     controls.push({
@@ -890,11 +1053,12 @@
         const t = m ? m[1] : T.colorByHex.get(hx);
         if (shadow.activeElement !== hex) hex.value = hx || v;
         tok.textContent = t ? tokName(t).replace(/^--/, '') : '';
-        if (hx && hx.length === 7) native.value = hx;
+        pop.querySelectorAll('.sws button').forEach((b) => b.classList.toggle('on', b.style.background && toHex(b.style.background) === hx));
       },
     });
     return wrap;
   }
+
 
   function section(name, rows) {
     const sec = h('div', { class: 'sec' + (S.collapsed.has(name) ? ' closed' : '') });
@@ -991,6 +1155,7 @@
   let statusEl;
   let footBtns = {};
 
+  let scrollTo = null; // selector to bring into view after the next render (an opened dropdown)
   function renderPanel() {
     const keep = panel.querySelector('.body');
     const scroll = keep ? keep.scrollTop : 0;
@@ -1037,6 +1202,7 @@
     body.scrollTop = scroll;
     // Tab walks parameters only; buttons, toggles and the note stay clickable but out of the order.
     panel.querySelectorAll('button, textarea, input:not([data-param])').forEach((x) => (x.tabIndex = -1));
+    if (scrollTo) requestAnimationFrame(() => { const t = panel.querySelector(scrollTo); if (t) t.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); scrollTo = null; });
 
     if (!panelPos) {
       panel.style.left = innerWidth - 292 - 16 + 'px';
