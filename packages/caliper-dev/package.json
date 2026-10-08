@@ -1,0 +1,60 @@
+{
+  "name": "caliper-dev",
+  "version": "0.1.0",
+  "description": "Click any element on your dev site, see the parameters that make it, tune them live, then save the preview or send it to your coding agent.",
+  "keywords": [
+    "design",
+    "inspector",
+    "devtools",
+    "tailwind",
+    "css",
+    "live-edit",
+    "react",
+    "agent",
+    "mcp"
+  ],
+  "license": "PolyForm-Shield-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/8aobao/caliper.git",
+    "directory": "packages/caliper-dev"
+  },
+  "homepage": "https://github.com/8aobao/caliper#readme",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./caliper.global.js": "./dist/caliper.global.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "tsup"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  }
+}

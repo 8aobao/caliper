@@ -1,14 +1,16 @@
 {
-  "name": "caliper-dev",
-  "version": "0.1.0",
-  "description": "Click any element on your dev site, see the parameters that make it, tune them live, then save the preview or send it to your coding agent.",
-  "keywords": ["design", "inspector", "devtools", "tailwind", "css", "live-edit", "mcp", "claude", "agent"],
-  "license": "UNLICENSED",
-  "type": "module",
-  "bin": { "caliper": "bin/caliper.js" },
-  "files": ["bin/", "src/", "client/", "demo/", "README.md"],
+  "name": "caliper-monorepo",
+  "private": true,
+  "workspaces": ["packages/caliper-dev", "packages/caliper-mcp"],
   "scripts": {
-    "start": "node bin/caliper.js server"
+    "build": "npm run build -w caliper-dev && npm run build -w caliper-mcp",
+    "dev": "npm run build && node packages/caliper-mcp/dist/cli.js server"
   },
-  "engines": { "node": ">=18" }
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.6.0"
+  }
 }

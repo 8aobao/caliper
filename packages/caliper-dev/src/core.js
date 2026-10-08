@@ -1,15 +1,33 @@
 /*! Caliper — click any element, see the parameters that make it, tune them live, send to the agent. */
-(() => {
-  'use strict';
-  if (window.__caliper) return;
+import { formatChange, AGENT_GUIDE } from './format.js';
+
+const VERSION = typeof __CALIPER_VERSION__ !== 'undefined' ? __CALIPER_VERSION__ : 'dev';
+
+// Mounts the toolbar into the page and returns an unmount function. Without an endpoint it works
+// locally (inspect, tune, save, copy); with one (a running `caliper-mcp server`) it can also send
+// changes to the agent. Mounting twice returns the existing instance's unmount.
+export function mount(options = {}) {
+  if (typeof window === 'undefined') return () => {};
+  if (window.__caliper && window.__caliper.unmount) return window.__caliper.unmount;
   window.__caliper = { booting: true };
 
-  /*__FORMAT__*/
-
-  const script = document.currentScript;
-  const ENDPOINT = (
-    window.CALIPER_ENDPOINT || (script && script.src ? new URL(script.src).origin : 'http://localhost:4848')
-  ).replace(/\/$/, '');
+  const ENDPOINT = options.endpoint ? String(options.endpoint).replace(/\/$/, '') : null;
+  // Everything that hooks into the page is registered here, so unmount can undo it.
+  const cleanups = [];
+  const listen = (target, type, fn, opts) => {
+    target.addEventListener(type, fn, opts);
+    cleanups.push(() => target.removeEventListener(type, fn, opts));
+  };
+  const timers = new Set();
+  const later = (fn, ms) => {
+    const id = setTimeout(() => {
+      timers.delete(id);
+      fn();
+    }, ms);
+    timers.add(id);
+    return id;
+  };
+  let alive = true;
   const STORE_KEY = 'caliper:edits';
   const UI_KEY = 'caliper:ui';
   const SESSION = (() => {
@@ -728,6 +746,7 @@
     } else matchLayer.innerHTML = '';
   }
   (function loop() {
+    if (!alive) return;
     try {
       drawHover();
       drawSel();
@@ -1256,9 +1275,10 @@
     statusEl = h('div', { class: 'status' });
     footBtns = {
       reset: h('button', { class: 'btn', title: 'Reset all changes on this element', onclick: () => resetProps(Object.keys(e.props)) }, icon('reset')),
-      copy: h('button', { class: 'btn', title: 'Copy as a prompt for any agent', onclick: () => copy([e]) }, 'Copy'),
+      copy: h('button', { class: ENDPOINT ? 'btn' : 'btn primary', title: 'Copy as a prompt for any agent', onclick: () => copy([e]) }, 'Copy'),
       save: h('button', { class: 'btn', title: 'Keep this preview on reload', onclick: () => save(e) }, 'Save'),
-      send: h('button', { class: 'btn primary', title: 'Send to the agent (⌘↵)', onclick: () => send([e]) }, icon('send'), 'Send to agent'),
+      // No endpoint (local-only mode): no Send; Copy is the hand-off.
+      send: h('button', { class: 'btn primary', hidden: !ENDPOINT, title: 'Send to the agent (⌘↵)', onclick: () => send([e]) }, icon('send'), 'Send to agent'),
     };
     const foot = h('div', { class: 'foot' }, note, statusEl, h('div', { class: 'acts' }, footBtns.reset, footBtns.copy, footBtns.save, footBtns.send));
     panel.append(head, body, foot);
@@ -1294,7 +1314,7 @@
     footBtns.reset.disabled = !n;
     footBtns.copy.disabled = footBtns.save.disabled = !any;
     footBtns.send.disabled = !any || !S.online || e.agent === 'pending' || e.agent === 'acknowledged';
-    footBtns.send.title = S.online ? 'Send to the agent (⌘↵)' : `Caliper server offline (${ENDPOINT}) — use Copy`;
+    footBtns.send.title = S.online ? 'Send to the agent (⌘↵)' : `Caliper server offline (${ENDPOINT}): run "npx caliper-mcp server", or use Copy`;
     footBtns.save.textContent = e.saved && !e.dirty ? 'Saved' : 'Save';
   }
 
@@ -1420,7 +1440,8 @@
   async function send(edits) {
     edits = edits.filter((e) => hasContent(e) && e.agent !== 'pending' && e.agent !== 'acknowledged');
     if (!edits.length) return;
-    if (!S.online) return toast(`Caliper server offline — start it with: caliper server`);
+    if (!ENDPOINT) return copy(edits);
+    if (!S.online) return toast('Caliper server offline. Start it with: npx caliper-mcp server');
     let ok = 0;
     for (const e of edits) {
       try {
@@ -1445,7 +1466,7 @@
 
   function removeEdit(e) {
     S.edits = S.edits.filter((x) => x !== e);
-    if (e.changeId && (e.agent === 'pending' || e.agent === 'acknowledged' || e.agent === 'modified'))
+    if (ENDPOINT && e.changeId && (e.agent === 'pending' || e.agent === 'acknowledged' || e.agent === 'modified'))
       fetch(`${ENDPOINT}/changes/${e.changeId}`, { method: 'DELETE' }).catch(() => {});
     if (S.edit === e) S.edit = S.sel ? newEdit(S.sel) : null;
     applyStyles();
@@ -1459,6 +1480,7 @@
   let es;
   let backoff = 2000;
   function connect() {
+    if (!ENDPOINT || !alive) return;
     try {
       es = new EventSource(ENDPOINT + '/events');
     } catch {
@@ -1475,7 +1497,7 @@
       es.close();
       renderBar();
       syncAll();
-      setTimeout(connect, backoff);
+      later(connect, backoff);
       backoff = Math.min(backoff * 2, 60000);
     };
     es.addEventListener('snapshot', (ev) => {
@@ -1539,7 +1561,7 @@
     bar.append(
       h('button', { class: 'bb', title: 'All changes', onclick: () => { S.listOpen = !S.listOpen; renderList(); renderBar(); } }, icon('list')),
       h('button', { class: 'bb', title: S.show ? 'Showing your changes — click to see the original' : 'Showing the original — click to see your changes', onclick: () => { S.show = !S.show; applyStyles(); renderBar(); } }, icon(S.show ? 'eye' : 'eyeOff')),
-      h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline — run "caliper server" (${ENDPOINT})`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
+      ENDPOINT && h('button', { class: 'bb primary', disabled: !unsent.length || !S.online, title: S.online ? 'Send every unsent change to the agent' : `Caliper server offline (${ENDPOINT}): run "npx caliper-mcp server"`, onclick: () => send(unsent) }, icon('send'), unsent.length ? `Send ${unsent.length}` : 'Send'),
       h('button', { class: 'ib', title: 'Collapse', onclick: () => setCollapsed(true) }, icon('collapse')),
     );
     evenSpacing();
@@ -1704,7 +1726,7 @@
     lsSet(UI_KEY, { ...lsGet(UI_KEY, {}), barPos });
     placeBar();
   });
-  window.addEventListener('resize', () => placeBar());
+  listen(window, 'resize', () => placeBar());
 
   function pill(e) {
     if (e.agent === 'pending') return h('span', { class: 'pill blue' }, 'sent');
@@ -1767,20 +1789,20 @@
     e.stopImmediatePropagation();
   };
   for (const t of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'dblclick', 'contextmenu', 'touchstart', 'auxclick'])
-    window.addEventListener(t, block, { capture: true, passive: false });
-  window.addEventListener('click', (e) => {
+    listen(window, t, block, { capture: true, passive: false });
+  listen(window, 'click', (e) => {
     if (!S.inspecting || isOurs(e)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
     select(e.target.nodeType === 1 ? e.target : e.target.parentElement);
   }, true);
-  window.addEventListener('pointermove', (e) => {
+  listen(window, 'pointermove', (e) => {
     if (!S.inspecting) return;
     S.hover = isOurs(e) ? null : e.target;
   }, true);
-  document.addEventListener('mouseleave', () => (S.hover = null));
+  listen(document, 'mouseleave', () => (S.hover = null));
 
-  window.addEventListener('keydown', (e) => {
+  listen(window, 'keydown', (e) => {
     const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.composedPath()[0] || {}).tagName) || (e.composedPath()[0] || {}).isContentEditable;
     if (e.altKey && e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
@@ -1804,7 +1826,7 @@
 
   // SPA navigation: re-scope overrides when the path changes.
   let lastPath = location.pathname;
-  setInterval(() => {
+  const pathWatch = setInterval(() => {
     if (location.pathname === lastPath) return;
     lastPath = location.pathname;
     applyStyles();
@@ -1823,16 +1845,34 @@
     renderBar();
     connect();
     window.__caliper = {
-      version: '__CALIPER_VERSION__',
+      version: VERSION,
       endpoint: ENDPOINT,
       state: S,
       inspect: setInspect,
       select,
+      unmount,
       rescanTokens: () => { Object.assign(T, { colors: [], colorByHex: new Map(), text: new Map(), radius: new Map(), weight: new Map(), leading: new Map(), tracking: new Map(), spacingPx: null }); scanTokens(); },
     };
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+
+  function unmount() {
+    if (!alive) return;
+    alive = false;
+    cleanups.forEach((fn) => fn());
+    timers.forEach((id) => clearTimeout(id));
+    clearInterval(pathWatch);
+    if (es) es.close();
+    if (barAnim) barAnim.cancel();
+    host.remove();
+    styleEl.remove();
+    if (probe) probe.remove();
+    document.documentElement.style.cursor = '';
+    if (window.__caliper && window.__caliper.unmount === unmount) delete window.__caliper;
+  }
+
+  if (document.readyState === 'loading') listen(document, 'DOMContentLoaded', boot);
   else boot();
   // Tokens from stylesheets that load late (Tailwind browser build, CSS-in-JS).
-  window.addEventListener('load', () => setTimeout(() => window.__caliper && window.__caliper.rescanTokens(), 300));
-})();
+  listen(window, 'load', () => later(() => window.__caliper && window.__caliper.rescanTokens && window.__caliper.rescanTokens(), 300));
+  return unmount;
+}

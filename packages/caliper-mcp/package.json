@@ -1,0 +1,35 @@
+{
+  "name": "caliper-mcp",
+  "version": "0.1.0",
+  "description": "Server and MCP tools for Caliper: receives live style changes from the browser and hands them to your coding agent.",
+  "keywords": [
+    "mcp",
+    "caliper",
+    "design",
+    "agent",
+    "claude",
+    "devtools"
+  ],
+  "license": "PolyForm-Shield-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/8aobao/caliper.git",
+    "directory": "packages/caliper-mcp"
+  },
+  "homepage": "https://github.com/8aobao/caliper#readme",
+  "type": "module",
+  "bin": {
+    "caliper-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "demo"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "npm --prefix ../caliper-dev run build && tsup"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

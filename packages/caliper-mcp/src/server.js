@@ -10,9 +10,12 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const DEFAULT_PORT = Number(process.env.CALIPER_PORT) || 4848;
 const VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 
+// The toolbar's script-tag build: shipped in dist/ when published; in the repo, read from the
+// sibling caliper-dev package's build.
+const CLIENT_PATHS = [path.join(ROOT, 'dist/caliper.global.js'), path.join(ROOT, '../caliper-dev/dist/caliper.global.js')];
 function clientSource() {
-  const format = fs.readFileSync(path.join(ROOT, 'src/format.js'), 'utf8').replace(/^export /gm, '');
-  return fs.readFileSync(path.join(ROOT, 'client/caliper.js'), 'utf8').replace('/*__FORMAT__*/', format).replace('__CALIPER_VERSION__', VERSION);
+  for (const p of CLIENT_PATHS) if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8');
+  throw new Error('Toolbar build not found. Run `npm run build` in the Caliper repo.');
 }
 
 const send = (res, status, body, type = 'application/json') => {
@@ -35,6 +38,7 @@ const readBody = (req) =>
 
 const brief = (c) => ({ id: c.id, status: c.status, reply: c.reply || null, updatedAt: c.updatedAt });
 
+export const VERSION_STRING = VERSION;
 export function startServer({ port = DEFAULT_PORT, log = (...a) => console.error(...a) } = {}) {
   const clients = new Set();
   let last = new Map();
@@ -159,11 +163,15 @@ export function startServer({ port = DEFAULT_PORT, log = (...a) => console.error
 }
 
 function help(port) {
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const react = `npm i -D caliper-dev\n\nimport { Caliper } from "caliper-dev";\n// in your root layout, development only:\n{process.env.NODE_ENV === "development" && <Caliper endpoint="http://localhost:${port}" />}`;
   const tag = `<script src="http://localhost:${port}/caliper.js" defer></script>`;
   return `<!doctype html><meta charset="utf-8"><title>Caliper</title>
 <style>body{font:15px/1.5 system-ui;max-width:640px;margin:60px auto;padding:0 16px;color:#222}code,pre{background:#f3f3f3;border-radius:6px;padding:2px 6px}pre{padding:12px;overflow:auto}</style>
-<h1>Caliper is running</h1>
-<p>Add this to your dev page (Next.js: a <code>&lt;Script&gt;</code> in the root layout, dev only):</p>
-<pre>${tag.replace(/</g, '&lt;')}</pre>
-<p>Try it on the <a href="/demo">demo page</a>. Toggle inspect with <b>⌥C</b>.</p>`;
+<h1>Caliper server is running</h1>
+<p>React (Next.js, Vite…):</p>
+<pre>${esc(react)}</pre>
+<p>Any other site, a script tag in development:</p>
+<pre>${esc(tag)}</pre>
+<p>Try it on the <a href="/demo">demo page</a>: press <b>⌥C</b> or click the circle.</p>`;
 }

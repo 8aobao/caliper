@@ -5,7 +5,7 @@ import readline from 'node:readline';
 import fs from 'node:fs';
 import * as store from './store.js';
 import { startServer } from './server.js';
-import { formatChange, AGENT_GUIDE } from './format.js';
+import { formatChange, AGENT_GUIDE } from '../../caliper-dev/src/format.js';
 
 const VERSION = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -114,11 +114,16 @@ async function handle(msg) {
   }
 }
 
+// `server`: HTTP + MCP over stdio in one process, like agentation-mcp. Run by an agent, stdio
+// carries MCP and the process ends with the session; run in a terminal (or in the background with
+// no stdin), it just keeps serving HTTP.
 export async function runMcp() {
-  await startServer({ log: (...a) => console.error(...a) }); // null if another one already runs: fine
+  const hosting = await startServer({ log: (...a) => console.error(...a) }); // null if another one already runs
+  let spoke = false;
   const out = (m) => process.stdout.write(JSON.stringify(m) + '\n');
   const rl = readline.createInterface({ input: process.stdin });
   rl.on('line', async (line) => {
+    spoke = true;
     let msg;
     try {
       msg = JSON.parse(line);
@@ -132,5 +137,7 @@ export async function runMcp() {
       out({ jsonrpc: '2.0', id: msg.id, error: { code: err.code || -32603, message: String(err.message || err) } });
     }
   });
-  rl.on('close', () => process.exit(0));
+  rl.on('close', () => {
+    if (spoke || !hosting) process.exit(0);
+  });
 }
