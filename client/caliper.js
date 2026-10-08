@@ -77,20 +77,19 @@
 
   // Figma-style side glyphs for box values: a faint box with a bold line on the edge being set
   // (inside the box for padding, outside it for margin), or the corner arc for radius.
+  // 16-unit grid; padding and margin share the same 9×9 box. Bars use the box's stroke weight,
+  // 2.5 units inside the edge for padding and 2.5 outside it for margin.
   const SIDE_LINES = {
-    pad: { t: 'M4.5 3.5h3', r: 'M8.5 4.5v3', b: 'M4.5 8.5h3', l: 'M3.5 4.5v3' },
-    mar: { t: 'M4.5 1h3', r: 'M11 4.5v3', b: 'M4.5 11h3', l: 'M1 4.5v3' },
+    pad: { t: 'M6.5 6h3', r: 'M10 6.5v3', b: 'M6.5 10h3', l: 'M6 6.5v3' },
+    mar: { t: 'M6 1h4', r: 'M15 6v4', b: 'M6 15h4', l: 'M1 6v4' },
   };
+  const CORNERS = { tl: 'M3.5 8V6.5a3 3 0 0 1 3-3H8', tr: 'M8 3.5h1.5a3 3 0 0 1 3 3V8', br: 'M12.5 8v1.5a3 3 0 0 1-3 3H8', bl: 'M8 12.5H6.5a3 3 0 0 1-3-3V8' };
   function sideIcon(kind, sides) {
-    const frame = kind === 'mar' ? '<rect x="3" y="3" width="6" height="6" rx="1.2" opacity=".4"/>' : '<rect x="1" y="1" width="10" height="10" rx="2" opacity=".4"/>';
-    let marks;
-    if (kind === 'rad') {
-      const C = { tl: 'M1.5 6V4.5a3 3 0 0 1 3-3H6', tr: 'M6 1.5h1.5a3 3 0 0 1 3 3V6', br: 'M10.5 6v1.5a3 3 0 0 1-3 3H6', bl: 'M6 10.5H4.5a3 3 0 0 1-3-3V6' };
-      marks = sides.map((c) => `<path d="${C[c]}" stroke-width="1.5"/>`).join('');
-      return h('span', { class: 'side-ic', html: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round">${sides.length === 4 ? '' : '<rect x="1.5" y="1.5" width="9" height="9" rx="3" opacity=".4"/>'}${marks}</svg>` });
-    }
-    marks = sides.map((sd) => `<path d="${SIDE_LINES[kind][sd]}" stroke-width="1.5"/>`).join('');
-    return h('span', { class: 'side-ic', html: `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-linecap="round">${frame}${marks}</svg>` });
+    const rx = kind === 'rad' ? 3 : 2;
+    const box = sides.length === 4 && kind === 'rad' ? '' : `<rect x="3.5" y="3.5" width="9" height="9" rx="${rx}" opacity=".4"/>`;
+    const marks = sides.map((sd) => `<path d="${kind === 'rad' ? CORNERS[sd] : SIDE_LINES[kind][sd]}"/>`).join('');
+    const all = sides.length === 4 && kind === 'rad' ? '<rect x="3.5" y="3.5" width="9" height="9" rx="3"/>' : '';
+    return h('span', { class: 'side-ic', html: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">${box}${all}${marks}</svg>` });
   }
 
   // ---------------------------------------------------------------- colors
@@ -512,7 +511,7 @@
   .changed > .dot, .changed > .rl > .dot { display: inline-block; }
   .dot:hover { box-shadow: 0 0 0 3px rgba(255,176,46,.3); }
   .mini { padding: 0 6px; gap: 4px; } .mini .lbl { color: #777; font-size: 10px; }
-  .side-ic { display: inline-flex; width: 12px; height: 12px; color: #9a9a9a; vertical-align: -2px; } .side-ic svg { width: 100%; height: 100%; }
+  .side-ic { display: inline-flex; width: 16px; height: 16px; color: #9a9a9a; vertical-align: -2px; } .side-ic svg { width: 100%; height: 100%; }
   .scrub:hover .side-ic, .scrub.drag .side-ic, .scrub:focus-visible .side-ic { color: #fff; }
 
   .grid2, .grid4 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; }
